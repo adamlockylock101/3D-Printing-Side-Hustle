@@ -23,3 +23,7 @@ out/
 *.gcode
 *.3mf
 !tests/fixtures/*.3mf
+
+# Build artefacts
+*.tsbuildinfo
+next-env.d.ts
