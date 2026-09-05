@@ -1,0 +1,104 @@
+# Shop configuration: everything that is a business decision rather than code.
+# Changing a value here changes quoting, material availability, and what gets auto-quoted.
+# See docs/decisions.md for which of these are confirmed and which are working defaults.
+
+currency: AUD
+locale: en-AU
+tax:
+  inclusive: true          # AU prices are displayed GST-inclusive
+  rate: 0.10
+  label: GST
+
+commerce:
+  minimum_order: 25.00     # Q-D. Below this, handling time exceeds the margin.
+  deposit_only: false      # Q-G. false = pay in full up front.
+  quote_valid_hours: 168   # a quote holds for 7 days, then filament prices may have moved
+  max_auto_quote_hours: 24 # Q-E. Longer jobs route to a manual quote instead of auto-quoting.
+  auto_decline_over_hours: 72
+
+pricing:
+  machine_rate_per_hour: 3.50   # depreciation + power + maintenance + nozzle/belt wear
+  labour_rate_per_hour: 45.00
+  setup_minutes: 8              # plate prep, load check, slice review
+  packing_minutes: 6
+  waste_factor: 0.08            # purge, prime line, AMS changes, brim
+  margin: 0.45                  # on cost subtotal
+  risk_buffer_cap: 0.35         # failure buffer never exceeds this fraction
+  rush_multipliers:
+    relaxed: 0.92
+    standard: 1.00
+    rush: 1.45
+  quantity_breaks:              # setup cost amortises across a batch
+    - { min_qty: 5,  discount: 0.08 }
+    - { min_qty: 10, discount: 0.14 }
+    - { min_qty: 25, discount: 0.22 }
+
+shipping:
+  free_over: 150.00
+  domestic_flat: 12.50
+  pickup_available: true
+  international: false
+
+# Printers available to the scheduler. Capabilities here gate the material catalogue:
+# no enclosed printer means ABS/ASA/PC/PA are filtered out of every recommendation.
+printers:
+  - id: x1c-01                  # Q-A: confirm model and count
+    name: Bambu X1C
+    kind: bambu
+    build_volume_mm: [256, 256, 256]
+    enclosed: true
+    hardened_nozzle: true       # Q-B: gates all CF-filled materials
+    nozzle_mm: 0.4
+    ams: true
+    ams_slots: 4
+    # Set by the shop agent at runtime; LAN mode + access code required.
+    lan_mode: true
+
+# Q-F. Only materials listed here are offered. The selection engine may rank an
+# unstocked material highly on paper; the stock filter is what keeps quotes honest.
+stocked_materials:
+  - id: pla
+    colours: [black, white, grey, red, blue]
+  - id: pla_tough
+    colours: [black, grey]
+  - id: petg
+    colours: [black, white, clear, grey]
+  - id: asa
+    colours: [black, white]
+  - id: tpu_95a
+    colours: [black]
+  - id: pa6_cf
+    colours: [black]
+
+# Jobs matching every condition skip the review queue once you trust the system.
+# Start with enabled: false and turn it on after ~50 orders.
+auto_approve:
+  enabled: false
+  max_price: 60.00
+  max_print_hours: 4
+  materials: [pla, pla_tough, petg]
+  require_returning_customer: true
+  require_no_geometry_warnings: true
+
+# Enforced at intake. A job matching any of these is declined with an explanation,
+# never silently quoted. See docs/PLAN.md §10.
+prohibited:
+  keywords:
+    - firearm
+    - gun part
+    - suppressor
+    - silencer
+    - lower receiver
+    - implant
+    - prosthetic (load bearing)
+    - drone propeller
+    - climbing
+    - harness
+    - scuba
+    - brake
+    - steering
+  categories:
+    - firearms_components
+    - medical_implantable
+    - safety_critical_structural
+    - life_support

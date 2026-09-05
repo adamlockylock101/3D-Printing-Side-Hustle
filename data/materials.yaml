@@ -15,15 +15,19 @@
 #   water_absorption_pct 24 h immersion, % by mass
 #   printability         1-5 on a well-tuned machine (5 = forgiving)
 #   warp                 low | medium | high
-#   process_capability_mm achievable dimensional tolerance on a tuned machine
+#   process_capability_mm nominal dimensional tolerance on a tuned machine
+#   tolerance_floor_mm    tightest tolerance the process can be pushed to; below this, decline
+#                         or escalate to another process rather than promise something you cannot hold
 
 version: 0.1.0
 process_defaults:
   fdm_04_nozzle:
     process_capability_mm: 0.20
+    tolerance_floor_mm: 0.15
     min_feature_mm: 0.8
   resin_msla:
     process_capability_mm: 0.05
+    tolerance_floor_mm: 0.03
     min_feature_mm: 0.3
 
 materials:

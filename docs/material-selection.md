@@ -150,7 +150,7 @@ functional outdoor parts as firmly as it rejects PLA for a hot car.
 
 ## 6. Keeping the table honest
 
-`data/materials.sample.yaml` is a starting point compiled from typical published values — treat
+`data/materials.yaml` is a starting point compiled from typical published values — treat
 every number as provisional until you've checked it against the datasheet for the specific brand
 and spool you actually buy, because grade-to-grade variation within "PETG" is larger than most
 people assume.

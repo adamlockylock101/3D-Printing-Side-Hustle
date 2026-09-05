@@ -14,7 +14,7 @@ to the printer, and reports status back.
 | [docs/PLAN.md](docs/PLAN.md) | Architecture, data model, pricing, printer integration, roadmap |
 | [docs/material-selection.md](docs/material-selection.md) | The requirements-to-material engine — the core differentiator |
 | [docs/open-questions.md](docs/open-questions.md) | Decisions needed before Phase 1 build starts |
-| [data/materials.sample.yaml](data/materials.sample.yaml) | Seed material property table (needs validation against supplier datasheets) |
+| [data/materials.yaml](data/materials.yaml) | Seed material property table (needs validation against supplier datasheets) |
 
 ## Status
 
