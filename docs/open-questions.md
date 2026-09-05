@@ -2,6 +2,10 @@
 
 Answers to §1 change what gets built and in what order. §2–§5 can be settled during Phase 0.
 
+> **Q1, Q7, Q8, Q9, Q10 and Q11 are answered** — see [decisions.md](decisions.md).
+> Bambu Lab printers, Next.js + Python worker, Stripe *and* Etsy, full MVP scope.
+> The remaining §1 items have working defaults in `config/shop.yaml` and are not blocking.
+
 ## 1. Blocking — needed before Phase 1
 
 ### Hardware
