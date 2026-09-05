@@ -1,0 +1,304 @@
+# Seed material property table for the selection engine.
+#
+# ⚠ PROVISIONAL. These are typical published values for generic grades, compiled as a starting
+#   structure — not datasheet truth for any specific spool. Brand-to-brand variation within a
+#   single family (especially PETG and "PLA+") is wide. Replace each value with numbers from the
+#   datasheet of the filament you actually stock before this drives customer-facing quotes.
+#
+# Property notes:
+#   hdt_045_c            heat deflection temperature at 0.45 MPa (°C)
+#   elongation_pct       elongation at break, XY, as-printed
+#   impact_notched       notched Izod, kJ/m²
+#   z_strength_ratio     layer-adhesion strength as a fraction of XY tensile
+#   creep_resistance     1-5, resistance to deformation under sustained load
+#   uv_resistance        poor | fair | good | excellent
+#   water_absorption_pct 24 h immersion, % by mass
+#   printability         1-5 on a well-tuned machine (5 = forgiving)
+#   warp                 low | medium | high
+#   process_capability_mm achievable dimensional tolerance on a tuned machine
+
+version: 0.1.0
+process_defaults:
+  fdm_04_nozzle:
+    process_capability_mm: 0.20
+    min_feature_mm: 0.8
+  resin_msla:
+    process_capability_mm: 0.05
+    min_feature_mm: 0.3
+
+materials:
+
+  - id: pla
+    name: PLA
+    process: fdm
+    tensile_mpa: 55
+    elongation_pct: 5
+    impact_notched: 3
+    hdt_045_c: 58
+    z_strength_ratio: 0.55
+    creep_resistance: 1
+    uv_resistance: poor
+    water_absorption_pct: 0.5
+    attacked_by: [solvents, acids, bases]
+    density_g_cm3: 1.24
+    cost_per_kg: 22
+    printability: 5
+    warp: low
+    requires_enclosure: false
+    requires_hardened_nozzle: false
+    requires_drying: false
+    food_safe_capable: false        # printed parts are not food safe regardless of resin grade
+    notes: >
+      Stiff, cheap, dimensionally excellent, best surface finish. Creeps badly under sustained
+      load and softens in a hot car. Ideal for prototypes, fit checks, and cosmetic parts;
+      wrong for almost anything structural or outdoors.
+
+  - id: pla_tough
+    name: Tough PLA / PLA+
+    process: fdm
+    tensile_mpa: 48
+    elongation_pct: 15
+    impact_notched: 8
+    hdt_045_c: 60
+    z_strength_ratio: 0.60
+    creep_resistance: 2
+    uv_resistance: poor
+    water_absorption_pct: 0.5
+    attacked_by: [solvents, acids, bases]
+    density_g_cm3: 1.24
+    cost_per_kg: 28
+    printability: 5
+    warp: low
+    requires_enclosure: false
+    requires_hardened_nozzle: false
+    requires_drying: false
+    food_safe_capable: false
+    notes: Same thermal ceiling as PLA but far less brittle. Good default for indoor light-duty parts.
+
+  - id: petg
+    name: PETG
+    process: fdm
+    tensile_mpa: 48
+    elongation_pct: 18
+    impact_notched: 8
+    hdt_045_c: 72
+    z_strength_ratio: 0.78
+    creep_resistance: 3
+    uv_resistance: fair
+    water_absorption_pct: 0.3
+    attacked_by: [solvents, acids]
+    density_g_cm3: 1.27
+    cost_per_kg: 24
+    printability: 4
+    warp: low
+    requires_enclosure: false
+    requires_hardened_nozzle: false
+    requires_drying: true
+    food_safe_capable: false
+    notes: >
+      The workhorse. Excellent layer adhesion (best Z ratio of the common materials), tough,
+      water-resistant, no enclosure needed. Stringy and poor at fine detail; mediocre UV life.
+
+  - id: asa
+    name: ASA
+    process: fdm
+    tensile_mpa: 44
+    elongation_pct: 20
+    impact_notched: 15
+    hdt_045_c: 98
+    z_strength_ratio: 0.58
+    creep_resistance: 3
+    uv_resistance: excellent
+    water_absorption_pct: 0.4
+    attacked_by: [solvents, fuels]
+    density_g_cm3: 1.07
+    cost_per_kg: 32
+    printability: 2
+    warp: high
+    requires_enclosure: true
+    requires_hardened_nozzle: false
+    requires_drying: true
+    food_safe_capable: false
+    notes: The outdoor answer. UV-stable, heat-tolerant, tough. Needs an enclosure and warps if rushed.
+
+  - id: abs
+    name: ABS
+    process: fdm
+    tensile_mpa: 42
+    elongation_pct: 18
+    impact_notched: 18
+    hdt_045_c: 96
+    z_strength_ratio: 0.55
+    creep_resistance: 3
+    uv_resistance: poor
+    water_absorption_pct: 0.4
+    attacked_by: [solvents, fuels]
+    density_g_cm3: 1.04
+    cost_per_kg: 24
+    printability: 2
+    warp: high
+    requires_enclosure: true
+    requires_hardened_nozzle: false
+    requires_drying: true
+    food_safe_capable: false
+    notes: Cheaper than ASA, acetone-smoothable, but yellows and embrittles in sunlight. Indoor heat duty only.
+
+  - id: pc
+    name: Polycarbonate
+    process: fdm
+    tensile_mpa: 65
+    elongation_pct: 12
+    impact_notched: 25
+    hdt_045_c: 125
+    z_strength_ratio: 0.62
+    creep_resistance: 4
+    uv_resistance: fair
+    water_absorption_pct: 0.35
+    attacked_by: [solvents, bases]
+    density_g_cm3: 1.20
+    cost_per_kg: 48
+    printability: 2
+    warp: high
+    requires_enclosure: true
+    requires_hardened_nozzle: false
+    requires_drying: true
+    food_safe_capable: false
+    notes: Strong and genuinely heat-tolerant. Very hygroscopic; a wet spool prints visibly foamy and weak.
+
+  - id: pa6_cf
+    name: PA6-CF (carbon-filled nylon)
+    process: fdm
+    tensile_mpa: 100
+    elongation_pct: 4
+    impact_notched: 9
+    hdt_045_c: 160
+    z_strength_ratio: 0.42
+    creep_resistance: 4
+    uv_resistance: fair
+    water_absorption_pct: 1.8
+    attacked_by: [acids]
+    density_g_cm3: 1.18
+    cost_per_kg: 85
+    printability: 2
+    warp: medium
+    requires_enclosure: true
+    requires_hardened_nozzle: true
+    requires_drying: true
+    food_safe_capable: false
+    notes: >
+      Highest stiffness and heat resistance on the list. Severely anisotropic — orientation
+      matters more than material choice here. Absorbs water fast; must be dried and kept dry.
+
+  - id: pa12
+    name: PA12 (nylon)
+    process: fdm
+    tensile_mpa: 48
+    elongation_pct: 30
+    impact_notched: 12
+    hdt_045_c: 95
+    z_strength_ratio: 0.68
+    creep_resistance: 3
+    uv_resistance: fair
+    water_absorption_pct: 0.9
+    attacked_by: [acids]
+    density_g_cm3: 1.01
+    cost_per_kg: 60
+    printability: 2
+    warp: medium
+    requires_enclosure: true
+    requires_hardened_nozzle: false
+    requires_drying: true
+    food_safe_capable: false
+    notes: Tough, wear-resistant, self-lubricating. Gears, living hinges, snap fits. Swells when wet.
+
+  - id: pp
+    name: Polypropylene
+    process: fdm
+    tensile_mpa: 28
+    elongation_pct: 200
+    impact_notched: 12
+    hdt_045_c: 90
+    z_strength_ratio: 0.70
+    creep_resistance: 2
+    uv_resistance: poor
+    water_absorption_pct: 0.02
+    attacked_by: []
+    density_g_cm3: 0.90
+    cost_per_kg: 55
+    printability: 1
+    warp: high
+    requires_enclosure: true
+    requires_hardened_nozzle: false
+    requires_drying: false
+    food_safe_capable: true
+    notes: >
+      Unmatched chemical resistance and true living hinges. Notoriously hard to stick to a bed
+      (needs PP-specific surface). Only worth offering when chemical resistance is the requirement.
+
+  - id: tpu_95a
+    name: TPU 95A
+    process: fdm
+    tensile_mpa: 35
+    elongation_pct: 500
+    impact_notched: null            # does not break in notched Izod
+    hdt_045_c: 60
+    z_strength_ratio: 0.90
+    creep_resistance: 2
+    uv_resistance: fair
+    water_absorption_pct: 0.6
+    attacked_by: [solvents, fuels]
+    density_g_cm3: 1.21
+    cost_per_kg: 38
+    printability: 3
+    warp: low
+    requires_enclosure: false
+    requires_hardened_nozzle: false
+    requires_drying: true
+    food_safe_capable: false
+    notes: Flexible, near-isotropic, effectively unbreakable. Slow to print; poor dimensional precision.
+
+  - id: resin_standard
+    name: Standard photopolymer resin
+    process: resin_msla
+    tensile_mpa: 50
+    elongation_pct: 7
+    impact_notched: 2
+    hdt_045_c: 65
+    z_strength_ratio: 0.95
+    creep_resistance: 2
+    uv_resistance: poor            # continues curing and embrittles in sunlight
+    water_absorption_pct: 0.5
+    attacked_by: [solvents, alcohols]
+    density_g_cm3: 1.15
+    cost_per_kg: 45
+    printability: 3
+    warp: low
+    requires_enclosure: false
+    requires_hardened_nozzle: false
+    requires_drying: false
+    food_safe_capable: false
+    notes: >
+      Detail and surface finish nothing FDM can match, and near-isotropic. Brittle, creeps, and
+      degrades outdoors. Display and fit-detail parts only, never sustained-load functional parts.
+
+  - id: resin_tough
+    name: Tough / ABS-like resin
+    process: resin_msla
+    tensile_mpa: 45
+    elongation_pct: 20
+    impact_notched: 5
+    hdt_045_c: 70
+    z_strength_ratio: 0.95
+    creep_resistance: 2
+    uv_resistance: poor
+    water_absorption_pct: 0.6
+    attacked_by: [solvents, alcohols]
+    density_g_cm3: 1.15
+    cost_per_kg: 65
+    printability: 3
+    warp: low
+    requires_enclosure: false
+    requires_hardened_nozzle: false
+    requires_drying: false
+    food_safe_capable: false
+    notes: Fine detail with usable ductility. Still creeps under sustained load; still not for outdoors.
