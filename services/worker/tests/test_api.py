@@ -211,3 +211,36 @@ def test_unknown_material_override_is_rejected(box_stl: Path):
 def test_upload_id_cannot_escape_the_upload_directory():
     response = client.post("/quote", json={"upload_id": "../../../etc/passwd", "requirements": {}})
     assert response.status_code == 404
+
+
+# --------------------------------------------------------------------------------------
+# Slicing for print
+# --------------------------------------------------------------------------------------
+
+
+def test_slice_reports_clearly_when_no_slicer_is_configured(box_stl: Path, monkeypatch):
+    """Without a slicer binary this must fail loudly rather than hand back an estimate."""
+    monkeypatch.setattr("worker.api.produce_artifact", _raise_unavailable)
+    upload_id = upload(box_stl).json()["upload_id"]
+    response = client.post(
+        "/slice", json={"upload_id": upload_id, "material_id": "petg", "settings": {}}
+    )
+    assert response.status_code == 503
+    assert "SLICER_BIN" in response.json()["detail"]
+
+
+def _raise_unavailable(*_args, **_kwargs):
+    from worker.slicing import SlicerUnavailable
+
+    raise SlicerUnavailable(
+        "No slicer binary configured. Set SLICER_BIN to your Bambu Studio or OrcaSlicer "
+        "executable, or export the plate from the slicer by hand."
+    )
+
+
+def test_slice_rejects_an_unknown_material(box_stl: Path):
+    upload_id = upload(box_stl).json()["upload_id"]
+    response = client.post(
+        "/slice", json={"upload_id": upload_id, "material_id": "unobtainium", "settings": {}}
+    )
+    assert response.status_code == 400

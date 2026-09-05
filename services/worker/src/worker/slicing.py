@@ -146,6 +146,39 @@ def _read_output_stats(output: Path) -> tuple[float | None, float | None, float]
     return _parse_gcode_stats(output.read_text(encoding="utf-8", errors="ignore"))
 
 
+def _build_command(
+    binary: str,
+    mesh_path: Path,
+    material: Material,
+    settings: dict[str, Any],
+    output: Path,
+    profile_dir: Path,
+) -> list[str]:
+    cmd = [
+        binary,
+        "--export-3mf",
+        str(output),
+        "--slice",
+        "0",
+        "--layer-height",
+        str(settings.get("layer_height_mm", 0.2)),
+        "--wall-loops",
+        str(settings.get("walls", 3)),
+        "--sparse-infill-density",
+        f"{settings.get('infill_percent', 20)}%",
+    ]
+    machine_profile = profile_dir / "machine.json"
+    process_profile = profile_dir / f"{material.id}.json"
+    if machine_profile.exists() and process_profile.exists():
+        cmd += ["--load-settings", f"{machine_profile};{process_profile}"]
+    cmd.append(str(mesh_path))
+    return cmd
+
+
+def _profile_dir() -> Path:
+    return Path(os.environ.get("SLICER_PROFILES", "config/slicer-profiles"))
+
+
 def slice_mesh(
     mesh_path: str | Path,
     material: Material,
@@ -161,28 +194,10 @@ def slice_mesh(
     if binary is None:
         return estimate(geometry, material, settings)
 
-    profile_dir = profile_dir or Path(os.environ.get("SLICER_PROFILES", "config/slicer-profiles"))
+    profile_dir = profile_dir or _profile_dir()
     with tempfile.TemporaryDirectory() as tmp:
         output = Path(tmp) / "out.3mf"
-        cmd = [
-            binary,
-            "--export-3mf",
-            str(output),
-            "--slice",
-            "0",
-            "--layer-height",
-            str(settings.get("layer_height_mm", 0.2)),
-            "--wall-loops",
-            str(settings.get("walls", 3)),
-            "--sparse-infill-density",
-            f"{settings.get('infill_percent', 20)}%",
-        ]
-        machine_profile = profile_dir / "machine.json"
-        process_profile = profile_dir / f"{material.id}.json"
-        if machine_profile.exists() and process_profile.exists():
-            cmd += ["--load-settings", f"{machine_profile};{process_profile}"]
-        cmd.append(str(mesh_path))
-
+        cmd = _build_command(binary, Path(mesh_path), material, settings, output, profile_dir)
         try:
             subprocess.run(cmd, check=True, capture_output=True, timeout=SLICE_TIMEOUT_S, text=True)
             minutes, grams, support = _read_output_stats(output)
@@ -195,6 +210,56 @@ def slice_mesh(
     return SliceResult(
         print_minutes=round(minutes, 1),
         filament_g=round(grams, 2),
+        support_g=round(support, 2),
+        layer_height_mm=float(settings.get("layer_height_mm", 0.2)),
+        estimated=False,
+        slicer=Path(binary).name,
+    )
+
+
+class SlicerUnavailable(RuntimeError):
+    pass
+
+
+def produce_artifact(
+    mesh_path: str | Path,
+    material: Material,
+    settings: dict[str, Any],
+    destination: Path,
+    profile_dir: Path | None = None,
+) -> SliceResult:
+    """Slice to a real .3mf on disk, for an approved job.
+
+    Unlike `slice_mesh`, this raises rather than estimating: an approved job needs a file the
+    printer can actually run, and quietly handing back an estimate would be worse than an error.
+
+    The .3mf carries the plate layout, AMS filament assignment and slicer metadata that a Bambu
+    machine needs — raw G-code is not enough. See docs/decisions.md D1.
+    """
+    binary = find_slicer()
+    if binary is None:
+        raise SlicerUnavailable(
+            "No slicer binary configured. Set SLICER_BIN to your Bambu Studio or OrcaSlicer "
+            "executable, or export the plate from the slicer by hand."
+        )
+
+    profile_dir = profile_dir or _profile_dir()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    cmd = _build_command(binary, Path(mesh_path), material, settings, destination, profile_dir)
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, timeout=SLICE_TIMEOUT_S, text=True)
+    except subprocess.CalledProcessError as exc:
+        raise SlicerUnavailable(f"The slicer failed: {exc.stderr or exc.stdout}".strip()) from exc
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise SlicerUnavailable(f"The slicer could not be run: {exc}") from exc
+
+    if not destination.exists():
+        raise SlicerUnavailable("The slicer produced no output file.")
+
+    minutes, grams, support = _read_output_stats(destination)
+    return SliceResult(
+        print_minutes=round(minutes or 0.0, 1),
+        filament_g=round(grams or 0.0, 2),
         support_g=round(support, 2),
         layer_height_mm=float(settings.get("layer_height_mm", 0.2)),
         estimated=False,

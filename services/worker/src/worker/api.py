@@ -11,6 +11,7 @@ import logging
 import os
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from . import storage
@@ -22,7 +23,7 @@ from .pricing import build_quote
 from .safety import screen
 from .schemas import GeometryReport, Quote, Recommendation, Requirements
 from .selection import select_material
-from .slicing import find_slicer, slice_mesh
+from .slicing import SlicerUnavailable, find_slicer, produce_artifact, slice_mesh
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +80,13 @@ class QuoteRequest(BaseModel):
     material_id: str | None = Field(
         default=None, description="Override the recommendation. Logged as a customer override."
     )
+
+
+class SliceRequest(BaseModel):
+    upload_id: str
+    material_id: str
+    settings: dict[str, object] = Field(default_factory=dict)
+    job_ref: str = Field(default="job", description="Used to name the produced file")
 
 
 class QuoteResponse(BaseModel):
@@ -248,6 +256,37 @@ def quote(body: QuoteRequest) -> QuoteResponse:
         geometry=geometry,
         overridden=overridden,
         override_acknowledgement=acknowledgement,
+    )
+
+
+@app.post("/slice")
+def slice_for_print(body: SliceRequest) -> FileResponse:
+    """Produce the real .3mf for an approved job.
+
+    Deliberately strict: an approved job needs a file the printer can run, so a missing or
+    failing slicer is an error here rather than a silent fall back to an estimate.
+    """
+    try:
+        path = storage.resolve(body.upload_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail="That upload has expired or was never stored."
+        ) from exc
+
+    material = by_id(body.material_id)
+    if material is None:
+        raise HTTPException(status_code=400, detail=f"Unknown material {body.material_id!r}")
+
+    safe_ref = "".join(c for c in body.job_ref if c.isalnum() or c in "-_")[:48] or "job"
+    destination = storage.upload_dir() / "artifacts" / f"{safe_ref}-{material.id}.3mf"
+
+    try:
+        produce_artifact(path, material, body.settings, destination)
+    except SlicerUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return FileResponse(
+        destination, media_type="model/3mf", filename=f"{safe_ref}-{material.id}.3mf"
     )
 
 

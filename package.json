@@ -1,0 +1,23 @@
+{
+  "name": "printshop",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "typecheck": "pnpm --filter web typecheck",
+    "lint": "pnpm --filter web lint",
+    "test:worker": "cd services/worker && .venv/bin/python -m pytest tests -q",
+    "worker": "cd services/worker && .venv/bin/uvicorn worker.api:app --app-dir src --reload --port 8000"
+  },
+  "packageManager": "pnpm@10.0.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "unrs-resolver",
+      "esbuild"
+    ]
+  }
+}

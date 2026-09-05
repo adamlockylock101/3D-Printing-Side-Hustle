@@ -1,0 +1,178 @@
+// Data model for the print shop. See docs/PLAN.md section 4.
+//
+// Notes that matter:
+//   * Every recommendation stores the material-table version it used, so a quote can always
+//     be reconstructed even after the table is edited.
+//   * `Event` is an append-only audit trail. When a customer asks why their part cost what it
+//     did, or a print fails, the decision trail is what answers it.
+//   * Orders from Stripe and from Etsy land in the same table, distinguished by `channel`,
+//     so the operator queue does not care where a job came from.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Channel {
+  DIRECT
+  ETSY
+}
+
+enum OrderStatus {
+  AWAITING_FILES     // an Etsy order arrived before the customer completed intake
+  AWAITING_PAYMENT
+  IN_REVIEW          // paid, waiting on the operator
+  APPROVED           // cleared for the printer
+  PRINTING
+  REPRINT_PENDING
+  READY
+  SHIPPED
+  COMPLETED
+  DECLINED
+  REFUNDED
+}
+
+enum JobState {
+  QUEUED
+  CLAIMED
+  PRINTING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model Customer {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String?
+  company          String?
+  stripeCustomerId String?
+  isB2b            Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  orders           Order[]
+  uploads          Upload[]
+}
+
+model Upload {
+  id         String   @id @default(cuid())
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+  filename   String
+  // Content hash from the worker. The same mesh uploaded twice reuses its analysis.
+  uploadId   String
+  bytes      Int
+  geometry   Json
+  createdAt  DateTime @default(now())
+  quotes     Quote[]
+
+  @@index([uploadId])
+}
+
+model Quote {
+  id              String   @id @default(cuid())
+  upload          Upload   @relation(fields: [uploadId], references: [id])
+  uploadId        String
+  requirements    Json
+  recommendation  Json
+  // Denormalised from recommendation so a quote stays reconstructable after a table edit.
+  materialTableVersion String
+  materialId      String
+  overridden      Boolean  @default(false)
+  quantity        Int      @default(1)
+  printMinutes    Float
+  filamentGrams   Float
+  priceCents      Int
+  currency        String
+  estimated       Boolean  @default(true)
+  breakdown       Json
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  order           Order?
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  // Unguessable token for the customer-facing status page — no account required.
+  publicToken           String      @unique @default(cuid())
+  quote                 Quote?      @relation(fields: [quoteId], references: [id])
+  quoteId               String?     @unique
+  customer              Customer    @relation(fields: [customerId], references: [id])
+  customerId            String
+  channel               Channel     @default(DIRECT)
+  status                OrderStatus @default(AWAITING_PAYMENT)
+  stripePaymentIntentId String?
+  stripeSessionId       String?     @unique
+  etsyReceiptId         String?     @unique
+  amountCents           Int
+  currency              String
+  shippingAddress       Json?
+  operatorNotes         String?
+  declineReason         String?
+  dueAt                 DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  jobs                  Job[]
+
+  @@index([status])
+  @@index([channel, status])
+}
+
+model Printer {
+  id            String   @id
+  name          String
+  kind          String
+  buildVolumeMm Json
+  enclosed      Boolean  @default(false)
+  hardenedNozzle Boolean @default(false)
+  amsSlots      Json?
+  agentLastSeen DateTime?
+  jobs          Job[]
+}
+
+model Job {
+  id            String    @id @default(cuid())
+  order         Order     @relation(fields: [orderId], references: [id])
+  orderId       String
+  printer       Printer?  @relation(fields: [printerId], references: [id])
+  printerId     String?
+  materialId    String
+  gcodeKey      String?
+  state         JobState  @default(QUEUED)
+  attempt       Int       @default(1)
+  progress      Float     @default(0)
+  failureReason String?
+  claimedAt     DateTime?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([state])
+}
+
+model FilamentStock {
+  id             String    @id @default(cuid())
+  materialId     String
+  colour         String
+  gramsRemaining Float
+  lot            String?
+  openedAt       DateTime?
+  driedAt        DateTime?
+
+  @@unique([materialId, colour, lot])
+}
+
+// Append-only audit trail. Never updated, never deleted.
+model Event {
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String
+  type      String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}

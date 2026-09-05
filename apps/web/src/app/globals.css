@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-paper text-ink antialiased;
+  }
+  /* Long numbers in quote breakdowns should line up. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-rule bg-white p-6;
+  }
+  .label {
+    @apply block text-sm font-medium text-ink;
+  }
+  .input {
+    @apply w-full rounded-md border border-rule bg-white px-3 py-2 text-sm
+           focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium
+           transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent/90;
+  }
+  .btn-secondary {
+    @apply btn border border-rule bg-white text-ink hover:bg-rule/30;
+  }
+  .chip {
+    @apply rounded-full border border-rule bg-white px-3 py-1.5 text-sm
+           hover:border-accent hover:bg-accentSoft;
+  }
+  .chip-selected {
+    @apply border-accent bg-accentSoft font-medium text-accent;
+  }
+  .prose-quote h1,
+  .prose-quote h2 {
+    @apply mb-2 mt-4 font-semibold;
+  }
+  .prose-quote p {
+    @apply mb-3 leading-relaxed;
+  }
+  .prose-quote ul {
+    @apply mb-3 list-disc space-y-1 pl-5;
+  }
+  .prose-quote strong {
+    @apply font-semibold;
+  }
+  .prose-quote em {
+    @apply text-muted;
+  }
+}
