@@ -19,7 +19,30 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "We need a valid email address." }, { status: 400 });
   }
-  const { quoteId, email, name, notes } = parsed.data;
+
+  try {
+    return await createOrder(parsed.data);
+  } catch (error) {
+    // Quoting degrades gracefully without a database; taking money must not. Fail clearly and
+    // tell the customer their quote is still good, rather than leaking a stack trace.
+    console.error("Checkout failed", error);
+    return NextResponse.json(
+      {
+        error:
+          "We can't take orders at the moment. Your quote is still valid — please try again " +
+          "shortly, or email us and we'll pick it up by hand.",
+      },
+      { status: 503 },
+    );
+  }
+}
+
+async function createOrder({
+  quoteId,
+  email,
+  name,
+  notes,
+}: z.infer<typeof Body>): Promise<NextResponse> {
 
   const quote = await db.quote.findUnique({ where: { id: quoteId }, include: { order: true } });
   if (!quote) {
