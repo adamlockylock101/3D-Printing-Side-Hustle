@@ -572,6 +572,14 @@ def select_material(
         for m, s, d in scored[1:3]
     ]
 
+    if not alternates:
+        # An empty alternates list reads as a bug in the UI unless we say why it is empty.
+        warnings.append(
+            f"{best_material.name} is the only material in our catalogue that meets every "
+            "requirement you gave, so there is no second option to compare against. Relaxing "
+            "one requirement would open up cheaper or easier alternatives."
+        )
+
     if not best_material.in_stock:
         warnings.append(
             f"{best_material.name} is not currently stocked; expect additional lead time while "

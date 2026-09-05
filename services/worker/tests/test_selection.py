@@ -346,3 +346,16 @@ def test_material_table_is_internally_consistent():
         assert material.warp in {"low", "medium", "high"}
         assert material.cost_per_kg > 0
         assert material.notes, f"{material.id} has no operator-facing note"
+
+
+def test_single_survivor_explains_why_there_are_no_alternates():
+    # Outdoor plus a hot-car service temperature leaves only ASA in the current catalogue.
+    req = Requirements(
+        lifecycle=Lifecycle.END_USE,
+        environment=Environment(outdoor_uv=True),
+        thermal=Thermal(sunlight_hot_car=True),
+    )
+    rec = select_material(req, caps=FULL_SHOP)
+    assert not rec.declined
+    assert rec.alternates == []
+    assert any("only material" in w for w in rec.warnings)

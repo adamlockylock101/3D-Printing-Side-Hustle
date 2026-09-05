@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.9",
     "pyyaml>=6.0",
     "trimesh>=4.5",
+    "rtree>=1.3",              # required by trimesh's ray intersector for wall-thickness sampling
     "numpy>=1.26",
     "python-multipart>=0.0.12",
     "httpx>=0.27",
