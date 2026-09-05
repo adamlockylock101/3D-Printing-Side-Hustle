@@ -176,3 +176,34 @@ def test_quantity_discount_thresholds():
     assert quantity_discount(1) == 0.0
     assert quantity_discount(5) > 0.0
     assert quantity_discount(25) > quantity_discount(10) > quantity_discount(5)
+
+
+def test_a_part_with_no_measurable_volume_is_never_auto_priced():
+    """The last line of defence: whatever produced a zero, don't quote it as cheap."""
+    from worker.schemas import GeometryReport, SliceResult
+
+    broken = GeometryReport(
+        bbox_mm=(50, 50, 50),
+        volume_mm3=0.0,
+        surface_area_mm2=1000.0,
+        triangle_count=12,
+        is_watertight=False,
+        warnings=["We could not measure this part's volume at all."],
+    )
+    material = by_id("petg")
+    sliced = SliceResult(print_minutes=5, filament_g=0.0, estimated=True)
+    quote = build_quote(material, sliced, broken, Requirements())
+    assert quote.requires_manual_review
+    assert "measure" in (quote.manual_review_reason or "")
+
+
+def test_a_tiny_part_keeps_a_non_zero_mass_so_the_real_warning_survives(inch_scale_stl: Path):
+    """A 2 mm part must not round to 0 g.
+
+    If it does, the generic "we could not measure this" guard fires and hides the real
+    problem, which is that the model is scaled wrong.
+    """
+    quote, _, sliced = quote_for(inch_scale_stl)
+    assert sliced.filament_g > 0
+    assert quote.requires_manual_review
+    assert "scale" in (quote.manual_review_reason or "")

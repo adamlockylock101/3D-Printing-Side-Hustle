@@ -58,3 +58,22 @@ def test_unsupported_format_is_rejected_with_a_readable_message(tmp_path: Path):
 def test_risk_score_stays_in_range(tall_spike_stl: Path, thin_tube_stl: Path, box_stl: Path):
     for fixture in (tall_spike_stl, thin_tube_stl, box_stl):
         assert 0.0 <= analyse(fixture).risk_score() <= 1.0
+
+
+def test_non_watertight_mesh_still_gets_a_usable_volume(open_mesh_stl: Path):
+    """A broken mesh must not silently report zero volume — that used to produce a free quote."""
+    report = analyse(open_mesh_stl)
+    assert not report.is_watertight
+    assert report.volume_mm3 > 0
+    assert any("watertight" in w for w in report.warnings)
+
+
+def test_broken_mesh_volume_stays_close_to_the_true_volume(open_mesh_stl: Path):
+    """The fixture is a 28800 + 18000 mm3 L-bracket built from two overlapping boxes.
+
+    Its convex hull is over three times that, so falling straight to the hull would badly
+    over-quote the material. The raw signed volume is still correct here and must be preferred.
+    """
+    report = analyse(open_mesh_stl)
+    assert report.volume_mm3 == pytest.approx(46_800, rel=0.05)
+    assert any("approximate" in w for w in report.warnings)

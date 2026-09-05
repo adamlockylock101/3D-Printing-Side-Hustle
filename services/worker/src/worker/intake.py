@@ -217,9 +217,16 @@ def heuristic_extract(raw_text: str) -> IntakeResult:
         max_temp = float(temp_match.group(1))
 
     quantity = 1
-    qty_match = re.search(r"\b(\d{1,4})\s*(?:off|pieces?|parts?|units?|copies|x)\b", text, re.I)
+    qty_match = re.search(
+        r"\b(\d{1,4})\s*(?:off|pieces?|parts?|units?|copies|x)\b"
+        r"|\b(?:need|want|make|print)\s+(\d{1,4})\b"
+        r"|\b(\d{1,4})\s+of\s+(?:them|these|those)\b",
+        text,
+        re.I,
+    )
     if qty_match:
-        quantity = max(1, int(qty_match.group(1)))
+        matched = next(g for g in qty_match.groups() if g)
+        quantity = max(1, int(matched))
 
     brittleness = None
     if _search(r"must not|can't break|cannot break|shatter|snap|brittle|flex|bend without", text):

@@ -90,7 +90,15 @@ def build_quote(
     requires_manual = False
     manual_reason: str | None = None
     total_hours = print_hours * quantity
-    if total_hours > commerce["auto_decline_over_hours"]:
+    if geometry.volume_mm3 <= 0 or slice_result.filament_g <= 0:
+        # Belt and braces. Whatever produced a zero here — a broken mesh, a failed hull, a
+        # slicer that returned nothing — the one thing we must not do is quote it as cheap.
+        requires_manual = True
+        manual_reason = (
+            "We could not measure how much material this part needs, so it is priced by hand "
+            "rather than automatically."
+        )
+    elif total_hours > commerce["auto_decline_over_hours"]:
         requires_manual = True
         manual_reason = (
             f"{total_hours:.0f} hours of print time exceeds the "
@@ -182,7 +190,7 @@ def build_quote(
         currency=cfg["currency"],
         lines=lines,
         print_minutes_each=slice_result.print_minutes,
-        filament_g_each=round(total_grams, 1),
+        filament_g_each=round(total_grams, 2),
         lead_time=req.lead_time or LeadTime.STANDARD,
         estimated=slice_result.estimated,
         requires_manual_review=requires_manual,

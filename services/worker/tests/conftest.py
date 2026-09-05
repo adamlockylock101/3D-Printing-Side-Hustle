@@ -41,3 +41,17 @@ def inch_scale_stl() -> Path:
 def tall_spike_stl() -> Path:
     """Tall, narrow and top-heavy: the shape most likely to come off the plate."""
     return _export(trimesh.creation.cone(radius=6, height=90, sections=48))
+
+
+@pytest.fixture(scope="session")
+def open_mesh_stl() -> Path:
+    """Two overlapping boxes concatenated: a valid part, but not a watertight mesh.
+
+    This is what an L-bracket exported from a sketchy CAD workflow looks like, and it is the
+    case that used to produce a zero-volume quote.
+    """
+    plate = trimesh.creation.box(extents=(80, 60, 6))
+    plate.apply_translation((0, 0, 3))
+    web = trimesh.creation.box(extents=(6, 60, 50))
+    web.apply_translation((-37, 0, 31))
+    return _export(trimesh.util.concatenate([plate, web]))

@@ -6,6 +6,7 @@ a mesh we cannot fully analyse still gets a quote, with warnings attached.
 
 from __future__ import annotations
 
+import logging
 import math
 from pathlib import Path
 
@@ -14,6 +15,8 @@ import trimesh
 
 from .config import shop_config
 from .schemas import GeometryReport
+
+log = logging.getLogger(__name__)
 
 SUPPORTED_SUFFIXES = {".stl", ".3mf", ".obj", ".ply", ".off"}
 
@@ -124,6 +127,43 @@ def _largest_build_volume() -> tuple[float, float, float]:
     return (float(largest[0]), float(largest[1]), float(largest[2]))
 
 
+def _fallback_volume(mesh: trimesh.Trimesh, raw_volume: float, warnings: list[str]) -> float:
+    """Best available volume for a mesh that is not watertight.
+
+    The signed volume trimesh computes is usually still correct for the common breakages —
+    overlapping solids, duplicate faces, a few flipped normals — so prefer it whenever it is
+    physically possible, meaning positive and no larger than the convex hull. Only fall back to
+    the hull when the raw figure is impossible, because the hull can over-state a concave part
+    several times over: an L-bracket's hull is more than three times the bracket.
+    """
+    hull: float | None = None
+    try:
+        hull = float(abs(mesh.convex_hull.volume)) or None
+    except Exception:
+        log.warning("Convex hull failed; relying on the raw mesh volume", exc_info=True)
+
+    if raw_volume > 0 and (hull is None or raw_volume <= hull * 1.01):
+        warnings.append(
+            "We could not fully verify this mesh, so the material estimate is approximate. "
+            "We confirm it against a real slice before printing."
+        )
+        return raw_volume
+
+    if hull is not None:
+        warnings.append(
+            "This mesh is broken enough that we cannot measure its enclosed volume, so we have "
+            "used an upper bound. The quoted material is likely to be more than the part needs, "
+            "and we will correct it by hand before charging you."
+        )
+        return hull
+
+    warnings.append(
+        "We could not measure this part's volume at all. The mesh is likely badly broken, so "
+        "we will price it by hand rather than guess."
+    )
+    return 0.0
+
+
 def analyse(path: str | Path) -> GeometryReport:
     path = Path(path)
     mesh = _load(path)
@@ -140,11 +180,12 @@ def analyse(path: str | Path) -> GeometryReport:
             "The mesh is not watertight (it has holes or flipped faces). We will attempt an "
             "automatic repair, but the printed result may differ from your model."
         )
-        # An open mesh has no meaningful enclosed volume; fall back to the convex hull.
-        try:
-            volume = float(abs(mesh.convex_hull.volume))
-        except Exception:
-            volume = 0.0
+        # An open mesh has no reliable enclosed volume. Prefer the convex hull, which is an
+        # upper bound and so errs towards over-quoting rather than under-quoting. Fall back to
+        # the raw signed volume if the hull cannot be computed, and only report zero when
+        # nothing worked — a zero here must never reach a price, so pricing treats it as a
+        # manual-review trigger rather than a cheap part.
+        volume = _fallback_volume(mesh, volume, warnings)
 
     footprint = _hull_area_2d(mesh.vertices[:, :2])
     height = bbox[2]

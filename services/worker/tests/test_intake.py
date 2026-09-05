@@ -211,3 +211,14 @@ def test_screening_matches_whole_words_only():
 def test_empty_text_passes_screening():
     assert screen("").allowed
     assert screen(None).allowed
+
+
+def test_quantity_is_read_from_natural_phrasing():
+    for text, expected in [
+        ("I need 3 of them", 3),
+        ("Please make 12", 12),
+        ("6 off please", 6),
+        ("I need 2 parts", 2),
+        ("Just the one", 1),
+    ]:
+        assert heuristic_extract(text).requirements.quantity == expected, text

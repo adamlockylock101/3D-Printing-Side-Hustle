@@ -99,8 +99,11 @@ def estimate(geometry: GeometryReport, material: Material, settings: dict[str, A
 
     return SliceResult(
         print_minutes=round(print_minutes, 1),
-        filament_g=round(filament_g, 2),
-        support_g=round(support_g, 2),
+        # Three decimals, not two: a part small enough to round to 0.00 g would otherwise trip
+        # the "we could not measure this" guard in pricing and mask the real problem, which is
+        # usually that the model is scaled wrong.
+        filament_g=round(filament_g, 3),
+        support_g=round(support_g, 3),
         layer_height_mm=layer_height,
         estimated=True,
         slicer="estimator",
