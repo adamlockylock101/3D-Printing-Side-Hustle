@@ -35,8 +35,9 @@ export default async function AdminPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Review queue</h1>
           <p className="mt-1 text-sm text-muted tabular">
-            {countFor("IN_REVIEW")} waiting on you &middot; {countFor("APPROVED")} queued to print
-            &middot; {countFor("PRINTING")} on the plate
+            {countFor("IN_REVIEW")} waiting on you &middot; {countFor("AWAITING_FILES")} waiting on
+            a file &middot; {countFor("APPROVED")} queued to print &middot; {countFor("PRINTING")}{" "}
+            on the plate
           </p>
         </div>
         <div className="flex items-center gap-3">

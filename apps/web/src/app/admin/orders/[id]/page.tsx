@@ -123,7 +123,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                   {requirements.raw_text}
                 </blockquote>
               )}
-              <p className="mt-3 text-sm">{requirementsSummary(requirements).join(" &middot; ")}</p>
+              <p className="mt-3 text-sm">{requirementsSummary(requirements).join(" \u00b7 ")}</p>
               {order.operatorNotes && (
                 <p className="mt-3 rounded-md bg-rule/30 px-3 py-2 text-sm">
                   <span className="font-medium">Customer note:</span> {order.operatorNotes}

@@ -47,6 +47,9 @@ IMMERSION_ABSORPTION_MAX = 1.0
 # Minimum UV rank for outdoor service; matches materials.UV_RANK["good"].
 UV_GOOD = 2
 
+# Above this elongation a material is an elastomer, not a structural plastic.
+ELASTOMER_ELONGATION = 200.0
+
 SCORING_DIMENSIONS = (
     "strength",
     "toughness",
@@ -148,6 +151,19 @@ def _hard_filter(material: Material, req: Requirements, caps: PrinterCapabilitie
                 f"{material.process.upper()} cannot hold tighter than about +/-{floor:.2f} mm; "
                 f"the part needs +/-{tolerance:.2f} mm"
             )
+
+    # An elastomer has no meaningful tolerance: it deforms under the force you measure it with,
+    # let alone in service. Scoring alone will not catch this, because TPU is low-warp and prints
+    # at the same process capability as anything else — so it has to be a filter.
+    if (
+        req.precision.fit_critical
+        or req.precision.tolerance_class in ("tight", "press_fit")
+        or (tolerance is not None and tolerance <= 0.2)
+    ) and material.elongation_pct > ELASTOMER_ELONGATION:
+        return (
+            f"Too elastic to hold a dimension (elongation {material.elongation_pct:.0f}%); "
+            "it deforms under the load that would check the fit"
+        )
 
     min_feature = req.precision.min_feature_mm
     if min_feature is not None and min_feature < process_min_feature_mm(material.process):

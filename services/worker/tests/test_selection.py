@@ -359,3 +359,54 @@ def test_single_survivor_explains_why_there_are_no_alternates():
     assert not rec.declined
     assert rec.alternates == []
     assert any("only material" in w for w in rec.warnings)
+
+
+def test_every_offered_tolerance_option_except_press_fit_can_be_quoted():
+    """A questionnaire option that always declines is a lost order, not a safety feature.
+
+    "tight" is what a customer picks for a part that mates with something, and a tuned FDM
+    machine can hold it. Only "press_fit" is genuinely beyond the process.
+    """
+    from worker.schemas import Precision
+
+    for tolerance_class in ("cosmetic", "standard", "tight"):
+        rec = select_material(
+            Requirements(precision=Precision(tolerance_class=tolerance_class)), caps=FULL_SHOP
+        )
+        assert not rec.declined, f"{tolerance_class} should be quotable"
+
+    press_fit = select_material(
+        Requirements(precision=Precision(tolerance_class="press_fit")), caps=FULL_SHOP
+    )
+    assert press_fit.declined
+    assert "resin" in (press_fit.declined_reason or "").lower()
+
+
+def test_elastomers_are_rejected_for_dimensionally_critical_parts():
+    """TPU scores well on toughness for a cyclic load, but a clock gear in TPU is nonsense.
+
+    Scoring alone misses it: TPU is low-warp and prints at the same process capability as
+    anything else. It takes a filter.
+    """
+    from worker.schemas import Precision
+
+    gear = Requirements(
+        lifecycle=Lifecycle.END_USE,
+        load=Load(type=LoadType.CYCLIC, qualitative="light", duration=LoadDuration.SUSTAINED),
+        precision=Precision(tolerance_class="tight"),
+    )
+    rec = select_material(gear, caps=FULL_SHOP)
+    assert "tpu_95a" in rejected_ids(rec)
+    assert "elastic" in next(r.reason for r in rec.rejected if r.material_id == "tpu_95a")
+    assert by_id(rec.primary.material_id).elongation_pct <= 200
+
+
+def test_elastomers_are_still_available_when_dimensions_do_not_matter():
+    from worker.schemas import Precision
+
+    flexible = Requirements(
+        brittleness_tolerance=BrittlenessTolerance.MUST_NOT_SHATTER,
+        precision=Precision(tolerance_class="cosmetic"),
+    )
+    rec = select_material(flexible, caps=FULL_SHOP)
+    assert "tpu_95a" not in rejected_ids(rec)

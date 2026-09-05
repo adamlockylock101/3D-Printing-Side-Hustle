@@ -149,10 +149,13 @@ class Requirements(BaseModel):
     def effective_tolerance_mm(self) -> float | None:
         if self.precision.tolerance_mm is not None:
             return self.precision.tolerance_mm
+        # "tight" sits exactly at what a well-tuned FDM machine can hold, deliberately: it is
+        # the option a customer picks for a part that mates with something, and it must lead to
+        # a quote rather than a decline. "press_fit" is genuinely beyond FDM and should decline.
         return {
             "cosmetic": 0.5,
             "standard": 0.25,
-            "tight": 0.12,
+            "tight": 0.15,
             "press_fit": 0.08,
         }.get(self.precision.tolerance_class or "")
 
