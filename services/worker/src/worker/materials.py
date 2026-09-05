@@ -89,7 +89,8 @@ def _coerce(raw: dict[str, Any], stocked: dict[str, list[str]]) -> Material:
 def load_materials() -> list[Material]:
     cfg = materials_config()
     stocked = {
-        entry["id"]: entry.get("colours", []) for entry in shop_config().get("stocked_materials", [])
+        entry["id"]: entry.get("colours", [])
+        for entry in shop_config().get("stocked_materials", [])
     }
     return [_coerce(raw, stocked) for raw in cfg["materials"]]
 

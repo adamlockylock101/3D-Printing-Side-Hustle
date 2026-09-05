@@ -41,7 +41,9 @@ TIME_RE = re.compile(
     re.IGNORECASE,
 )
 FILAMENT_G_RE = re.compile(r";\s*(?:total )?filament used \[g\]\s*=\s*([\d.]+)", re.IGNORECASE)
-SUPPORT_G_RE = re.compile(r";\s*support (?:filament|material) used \[g\]\s*=\s*([\d.]+)", re.IGNORECASE)
+SUPPORT_G_RE = re.compile(
+    r";\s*support (?:filament|material) used \[g\]\s*=\s*([\d.]+)", re.IGNORECASE
+)
 
 
 def find_slicer() -> str | None:
@@ -61,9 +63,7 @@ def find_slicer() -> str | None:
 # --------------------------------------------------------------------------------------
 
 
-def estimate(
-    geometry: GeometryReport, material: Material, settings: dict[str, Any]
-) -> SliceResult:
+def estimate(geometry: GeometryReport, material: Material, settings: dict[str, Any]) -> SliceResult:
     """Estimate time and mass from geometry alone.
 
     Deliberately conservative and explainable. Shell volume is surface area times the wall
@@ -184,9 +184,7 @@ def slice_mesh(
         cmd.append(str(mesh_path))
 
         try:
-            subprocess.run(
-                cmd, check=True, capture_output=True, timeout=SLICE_TIMEOUT_S, text=True
-            )
+            subprocess.run(cmd, check=True, capture_output=True, timeout=SLICE_TIMEOUT_S, text=True)
             minutes, grams, support = _read_output_stats(output)
         except (subprocess.SubprocessError, OSError, zipfile.BadZipFile):
             return estimate(geometry, material, settings)

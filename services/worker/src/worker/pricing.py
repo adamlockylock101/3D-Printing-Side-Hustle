@@ -131,8 +131,7 @@ def build_quote(
             label="Labour",
             amount=_round_money(labour_cost),
             detail=(
-                f"setup, support removal and packing at "
-                f"${pricing['labour_rate_per_hour']:.0f}/h"
+                f"setup, support removal and packing at ${pricing['labour_rate_per_hour']:.0f}/h"
             ),
         ),
         CostLine(

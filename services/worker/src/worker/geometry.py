@@ -153,7 +153,7 @@ def analyse(path: str | Path) -> GeometryReport:
     build = _largest_build_volume()
     sorted_part = sorted(bbox, reverse=True)
     sorted_build = sorted(build, reverse=True)
-    fits = all(p <= b for p, b in zip(sorted_part, sorted_build))
+    fits = all(p <= b for p, b in zip(sorted_part, sorted_build, strict=True))
     if not fits:
         warnings.append(
             f"The part is {bbox[0]:.0f} x {bbox[1]:.0f} x {bbox[2]:.0f} mm, which does not fit "

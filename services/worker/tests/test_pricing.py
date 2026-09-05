@@ -61,8 +61,8 @@ def test_overhangs_generate_support_material(tall_spike_stl: Path, box_stl: Path
 
 def test_denser_material_weighs_more_for_the_same_part(box_stl: Path):
     geometry = analyse(box_stl)
-    petg = estimate(geometry, by_id("petg"), SETTINGS)     # 1.27 g/cm3
-    pp = estimate(geometry, by_id("pp"), SETTINGS)         # 0.90 g/cm3
+    petg = estimate(geometry, by_id("petg"), SETTINGS)  # 1.27 g/cm3
+    pp = estimate(geometry, by_id("pp"), SETTINGS)  # 0.90 g/cm3
     assert petg.filament_g > pp.filament_g
 
 

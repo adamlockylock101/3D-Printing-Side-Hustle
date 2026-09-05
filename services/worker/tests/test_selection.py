@@ -198,7 +198,9 @@ def test_open_frame_shop_cannot_offer_enclosure_materials():
 
 def test_carbon_fibre_needs_a_hardened_nozzle():
     caps = PrinterCapabilities(
-        any_enclosed=True, any_hardened_nozzle=False, has_resin=False,
+        any_enclosed=True,
+        any_hardened_nozzle=False,
+        has_resin=False,
         max_build_volume_mm=(256, 256, 256),
     )
     rec = select_material(Requirements(), caps=caps)
@@ -276,9 +278,7 @@ def test_tight_tolerance_reduces_layer_height():
 
 
 def test_tolerance_at_the_floor_is_accepted_but_below_it_is_not():
-    at_floor = select_material(
-        Requirements(precision=Precision(tolerance_mm=0.15)), caps=FULL_SHOP
-    )
+    at_floor = select_material(Requirements(precision=Precision(tolerance_mm=0.15)), caps=FULL_SHOP)
     below_floor = select_material(
         Requirements(precision=Precision(tolerance_mm=0.10)), caps=FULL_SHOP
     )

@@ -6,18 +6,17 @@ selection engine. The LLM only ever fills this in; it never chooses a material.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
-
 
 # --------------------------------------------------------------------------------------
 # Requirements
 # --------------------------------------------------------------------------------------
 
 
-class Lifecycle(str, Enum):
+class Lifecycle(StrEnum):
     PROTOTYPE = "prototype"
     FIT_CHECK = "fit_check"
     FUNCTIONAL_PROTOTYPE = "functional_prototype"
@@ -25,7 +24,7 @@ class Lifecycle(str, Enum):
     COSMETIC = "cosmetic"
 
 
-class LoadType(str, Enum):
+class LoadType(StrEnum):
     NONE = "none"
     TENSION = "tension"
     COMPRESSION = "compression"
@@ -36,27 +35,27 @@ class LoadType(str, Enum):
     CLAMPING = "clamping"
 
 
-class LoadDuration(str, Enum):
+class LoadDuration(StrEnum):
     MOMENTARY = "momentary"
     INTERMITTENT = "intermittent"
     SUSTAINED = "sustained"
 
 
-class BrittlenessTolerance(str, Enum):
+class BrittlenessTolerance(StrEnum):
     MUST_NOT_SHATTER = "must_not_shatter"
     PREFER_DUCTILE = "prefer_ductile"
     INDIFFERENT = "indifferent"
     STIFFNESS_PREFERRED = "stiffness_preferred"
 
 
-class Moisture(str, Enum):
+class Moisture(StrEnum):
     DRY = "dry"
     HUMID = "humid"
     SPLASH = "splash"
     IMMERSED = "immersed"
 
 
-class Chemical(str, Enum):
+class Chemical(StrEnum):
     FUELS = "fuels"
     OILS = "oils"
     SOLVENTS = "solvents"
@@ -65,13 +64,13 @@ class Chemical(str, Enum):
     ALCOHOLS = "alcohols"
 
 
-class CostSensitivity(str, Enum):
+class CostSensitivity(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
-class LeadTime(str, Enum):
+class LeadTime(StrEnum):
     RELAXED = "relaxed"
     STANDARD = "standard"
     RUSH = "rush"

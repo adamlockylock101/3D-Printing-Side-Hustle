@@ -89,9 +89,7 @@ class PrinterCapabilities:
 # --------------------------------------------------------------------------------------
 
 
-def _hard_filter(
-    material: Material, req: Requirements, caps: PrinterCapabilities
-) -> str | None:
+def _hard_filter(material: Material, req: Requirements, caps: PrinterCapabilities) -> str | None:
     """Return a rejection reason, or None if the material survives."""
 
     # Process availability first: rejecting on capability is clearer than on properties.
@@ -107,15 +105,19 @@ def _hard_filter(
         usable = material.hdt_045_c * HDT_SAFETY_FACTOR
         if max_temp > usable:
             return (
-                f"Softens too near the service temperature "
-                f"(HDT {material.hdt_045_c:.0f} C, usable to ~{usable:.0f} C, needs {max_temp:.0f} C)"
+                "Softens too near the service temperature "
+                f"(HDT {material.hdt_045_c:.0f} C, usable to ~{usable:.0f} C, "
+                f"needs {max_temp:.0f} C)"
             )
 
     env = req.environment
     if env.outdoor_uv and material.uv_rank < UV_GOOD:
         return f"UV resistance is {material.uv_resistance}; degrades outdoors"
 
-    if env.moisture == Moisture.IMMERSED and material.water_absorption_pct > IMMERSION_ABSORPTION_MAX:
+    if (
+        env.moisture == Moisture.IMMERSED
+        and material.water_absorption_pct > IMMERSION_ABSORPTION_MAX
+    ):
         return (
             f"Absorbs {material.water_absorption_pct:.1f}% water; swells and weakens when immersed"
         )
@@ -366,7 +368,9 @@ def _orientation_advice(material: Material, req: Requirements) -> str | None:
     return weak
 
 
-def _print_settings(material: Material, req: Requirements, geometry: GeometryReport | None) -> dict[str, Any]:
+def _print_settings(
+    material: Material, req: Requirements, geometry: GeometryReport | None
+) -> dict[str, Any]:
     """Perimeters carry bending load, not infill. Most customers assume the opposite."""
     load = req.load
     heavy = load.qualitative == "heavy" or (load.magnitude_n or 0) > 200
@@ -532,7 +536,13 @@ def select_material(
     weights = derive_weights(req)
     raw = {m.id: _raw_dimensions(m, req) for m in survivors}
     normalised = {
-        dim: dict(zip([m.id for m in survivors], _normalise([raw[m.id][dim] for m in survivors])))
+        dim: dict(
+            zip(
+                [m.id for m in survivors],
+                _normalise([raw[m.id][dim] for m in survivors]),
+                strict=True,
+            )
+        )
         for dim in SCORING_DIMENSIONS
     }
 
