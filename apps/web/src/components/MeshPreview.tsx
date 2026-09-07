@@ -23,13 +23,21 @@ export function MeshPreview({ file, className }: { file: File | null; className?
 
     const resize = () => {
       const { clientWidth: w, clientHeight: h } = container;
-      renderer.setSize(w, h, false);
+      if (w === 0 || h === 0) return;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      camera.aspect = w / Math.max(h, 1);
+      // updateStyle must stay on: without it the canvas keeps its intrinsic size and spills
+      // out of the container, over the rest of the page.
+      renderer.setSize(w, h, true);
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
     };
 
+    // Belt and braces against the same overflow, whatever the renderer does with styles.
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
     container.appendChild(renderer.domElement);
+    resize();
     scene.add(new THREE.HemisphereLight(0xffffff, 0x556070, 2.2));
     const key = new THREE.DirectionalLight(0xffffff, 1.4);
     key.position.set(1, 1.4, 1);
@@ -94,5 +102,10 @@ export function MeshPreview({ file, className }: { file: File | null; className?
   }, [file]);
 
   if (!file) return null;
-  return <div ref={mount} className={className ?? "h-64 w-full rounded-md bg-rule/30"} />;
+  return (
+    <div
+      ref={mount}
+      className={`overflow-hidden ${className ?? "h-64 w-full rounded-md bg-rule/30"}`}
+    />
+  );
 }

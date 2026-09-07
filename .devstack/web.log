@@ -1,0 +1,50 @@
+   ▲ Next.js 15.1.6
+   - Local:        http://localhost:3000
+   - Network:      http://192.0.2.2:3000
+
+ ✓ Starting...
+ ✓ Ready in 1375ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1326ms (588 modules)
+ GET / 200 in 1655ms
+ GET / 200 in 37ms
+ GET / 200 in 25ms
+ ○ Compiling /quote ...
+ ✓ Compiled /quote in 1418ms (629 modules)
+ GET /quote 200 in 1651ms
+ ○ Compiling /api/analyse ...
+ ✓ Compiled /api/analyse in 554ms (634 modules)
+ POST /api/analyse 200 in 693ms
+ ✓ Compiled /api/intake in 445ms (637 modules)
+ POST /api/intake 200 in 550ms
+ ✓ Compiled /api/intake/answers in 233ms (639 modules)
+ POST /api/intake/answers 200 in 264ms
+ ✓ Compiled /api/quote in 245ms (645 modules)
+ POST /api/quote 200 in 378ms
+ ○ Compiling /api/checkout ...
+ ✓ Compiled /api/checkout in 693ms (847 modules)
+ POST /api/checkout 200 in 777ms
+ ○ Compiling /orders/[token] ...
+ ✓ Compiled /orders/[token] in 502ms (863 modules)
+ GET /orders/cmtrbrxnk00087d02ri0kagz9 200 in 1414ms
+ GET / 200 in 33ms
+ GET /quote 200 in 107ms
+ ✓ Compiled /materials in 401ms (865 modules)
+ GET /materials 200 in 557ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 771ms (906 modules)
+ GET /admin 200 in 990ms
+ GET /quote 200 in 101ms
+ POST /api/analyse 200 in 39ms
+ GET /orders/cmtrbrxnk00087d02ri0kagz9 200 in 89ms
+ GET /orders/does-not-exist 404 in 47ms
+ ✓ Compiled in 1326ms (654 modules)
+ GET /quote 200 in 201ms
+ ✓ Compiled /api/analyse in 132ms (336 modules)
+ POST /api/analyse 200 in 292ms
+ ✓ Compiled /api/intake in 85ms (339 modules)
+ POST /api/intake 200 in 131ms
+ ✓ Compiled /api/intake/answers in 99ms (341 modules)
+ POST /api/intake/answers 200 in 131ms
+ ✓ Compiled /api/quote in 311ms (347 modules)
+ POST /api/quote 200 in 358ms

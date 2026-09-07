@@ -147,6 +147,13 @@ export interface IntakeResponse {
   declined_reason: string | null;
 }
 
+export interface AnswersResponse {
+  requirements: Requirements;
+  follow_ups: FollowUp[];
+  /** Only the questions the last answers made applicable — see the worker's /intake/answers. */
+  newly_relevant: FollowUp[];
+}
+
 export interface QuoteResponse {
   recommendation: Recommendation;
   quote: Quote | null;

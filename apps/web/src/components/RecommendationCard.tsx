@@ -8,12 +8,20 @@ export function RecommendationCard({
   recommendation,
   selectedMaterialId,
   onSelectMaterial,
+  alreadyShown = [],
 }: {
   recommendation: Recommendation;
   selectedMaterialId: string;
   onSelectMaterial: (materialId: string) => void;
+  /**
+   * Warnings the page has already displayed elsewhere. The worker copies the geometry warnings
+   * into the recommendation so it stands alone as an API response, which means a page showing
+   * both would otherwise print each one twice.
+   */
+  alreadyShown?: string[];
 }) {
   const [showRejected, setShowRejected] = useState(false);
+  const warnings = recommendation.warnings.filter((w) => !alreadyShown.includes(w));
   const settings = recommendation.print_settings as {
     walls?: number;
     infill_percent?: number;
@@ -83,9 +91,9 @@ export function RecommendationCard({
         </div>
       )}
 
-      {recommendation.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <ul className="space-y-2">
-          {recommendation.warnings.map((warning) => (
+          {warnings.map((warning) => (
             <li key={warning} className="text-sm text-muted">
               {warning}
             </li>

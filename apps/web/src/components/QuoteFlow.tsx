@@ -7,6 +7,7 @@ import { QuoteBreakdown } from "./QuoteBreakdown";
 import { RecommendationCard } from "./RecommendationCard";
 import type {
   AnalyseResponse,
+  AnswersResponse,
   FollowUp,
   IntakeResponse,
   QuoteResponse,
@@ -22,6 +23,10 @@ const STEP_LABELS: Record<Exclude<Step, "done">, string> = {
   quote: "Material and price",
   checkout: "Order",
 };
+
+// One round of questions, plus at most one follow-on round for anything an answer made
+// newly relevant. Beyond that the marginal question does not change the material.
+const MAX_QUESTION_ROUNDS = 2;
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -47,6 +52,11 @@ export function QuoteFlow() {
   const [requirements, setRequirements] = useState<Requirements | null>(null);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Every field the customer has already been shown. The worker is stateless and simply returns
+  // the highest-impact unanswered questions each time, so without this the form paginates
+  // through the whole catalogue instead of stopping at one short round.
+  const [askedFields, setAskedFields] = useState<string[]>([]);
+  const [questionRounds, setQuestionRounds] = useState(0);
 
   const [result, setResult] = useState<(QuoteResponse & { quoteId: string | null }) | null>(null);
   const [materialId, setMaterialId] = useState<string>("");
@@ -96,6 +106,8 @@ export function QuoteFlow() {
       if (!data.allowed) return; // declined; the message renders below
       setRequirements(data.requirements);
       setFollowUps(data.follow_ups);
+      setAskedFields(data.follow_ups.map((q) => q.field));
+      setQuestionRounds(1);
       setStep(data.follow_ups.length ? "questions" : "quote");
       if (!data.follow_ups.length) await requestQuote(data.requirements);
     });
@@ -104,18 +116,24 @@ export function QuoteFlow() {
 
   const submitAnswers = () =>
     run(async () => {
-      const data = await postJson<{ requirements: Requirements; follow_ups: FollowUp[] }>(
-        "/api/intake/answers",
-        { requirements, answers },
-      );
+      const data = await postJson<AnswersResponse>("/api/intake/answers", {
+        requirements,
+        answers,
+      });
       setRequirements(data.requirements);
       setAnswers({});
-      // Answering can open up newly relevant questions (say, load details once a load exists),
-      // so only move on when the list is genuinely empty.
-      if (data.follow_ups.length && data.follow_ups.some((q) => !(q.field in answers))) {
-        setFollowUps(data.follow_ups);
+
+      // The worker tells us which questions the answers actually unlocked — load duration only
+      // matters once we know there is a load. Those earn a second round. The lower-priority
+      // tail does not: the promise is a short form, and the engine handles the unknowns.
+      const fresh = data.newly_relevant.filter((q) => !askedFields.includes(q.field));
+      if (fresh.length > 0 && questionRounds < MAX_QUESTION_ROUNDS) {
+        setFollowUps(fresh);
+        setAskedFields((current) => [...current, ...fresh.map((q) => q.field)]);
+        setQuestionRounds((round) => round + 1);
         return;
       }
+
       setFollowUps([]);
       setStep("quote");
       await requestQuote(data.requirements);
@@ -323,9 +341,13 @@ export function QuoteFlow() {
             </div>
           )}
 
-          <h2 className="text-lg font-semibold">A few details</h2>
+          <h2 className="text-lg font-semibold">
+            {questionRounds > 1 ? "Two more, based on your answers" : "A few details"}
+          </h2>
           <p className="mt-1 text-sm text-muted">
-            Only the ones that would change our answer. Skip any you&rsquo;re unsure about.
+            {questionRounds > 1
+              ? "Your answers made these relevant. Last set, then we'll price it."
+              : "Only the ones that would change our answer. Skip any you're unsure about."}
           </p>
 
           <div className="mt-6 space-y-6">
@@ -413,6 +435,7 @@ export function QuoteFlow() {
                     recommendation={result.recommendation}
                     selectedMaterialId={materialId}
                     onSelectMaterial={chooseMaterial}
+                    alreadyShown={analysis?.geometry.warnings ?? []}
                   />
                 </div>
               </div>

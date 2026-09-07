@@ -1,6 +1,6 @@
 import type {
   AnalyseResponse,
-  FollowUp,
+  AnswersResponse,
   IntakeResponse,
   PublicConfig,
   QuoteResponse,
@@ -60,7 +60,7 @@ export const worker = {
   },
 
   answers(requirements: Requirements, answers: Record<string, unknown>) {
-    return call<{ requirements: Requirements; follow_ups: FollowUp[] }>("/intake/answers", {
+    return call<AnswersResponse>("/intake/answers", {
       method: "POST",
       body: JSON.stringify({ requirements, answers }),
     });

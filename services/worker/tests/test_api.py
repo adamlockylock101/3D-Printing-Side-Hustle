@@ -244,3 +244,48 @@ def test_slice_rejects_an_unknown_material(box_stl: Path):
         "/slice", json={"upload_id": upload_id, "material_id": "unobtainium", "settings": {}}
     )
     assert response.status_code == 400
+
+
+# --------------------------------------------------------------------------------------
+# Newly-relevant follow-ups
+# --------------------------------------------------------------------------------------
+
+
+def test_answering_unlocks_only_genuinely_new_questions():
+    """Saying there is a load makes load duration relevant; it does not make colour relevant.
+
+    Without this distinction the form paginates through the whole catalogue, and a promise of
+    "three to five questions" turns into ten.
+    """
+    first = client.post("/intake", json={"text": "A small part for a project."}).json()
+    response = client.post(
+        "/intake/answers",
+        json={"requirements": first["requirements"], "answers": {"load.type": "bending"}},
+    ).json()
+
+    newly = {q["field"] for q in response["newly_relevant"]}
+    assert "load.duration" in newly
+    assert "load.qualitative" in newly
+    # These applied all along — they were just below the display cut.
+    assert "cost_sensitivity" not in newly
+    assert "aesthetics.visible" not in newly
+
+
+def test_answering_a_question_that_unlocks_nothing_returns_no_new_ones():
+    first = client.post("/intake", json={"text": "A small part for a project."}).json()
+    response = client.post(
+        "/intake/answers",
+        json={"requirements": first["requirements"], "answers": {"cost_sensitivity": "high"}},
+    ).json()
+    assert response["newly_relevant"] == []
+
+
+def test_declaring_no_load_unlocks_no_load_questions():
+    first = client.post("/intake", json={"text": "A decorative model."}).json()
+    response = client.post(
+        "/intake/answers",
+        json={"requirements": first["requirements"], "answers": {"load.type": "none"}},
+    ).json()
+    newly = {q["field"] for q in response["newly_relevant"]}
+    assert "load.duration" not in newly
+    assert "load.qualitative" not in newly

@@ -27,6 +27,9 @@ from .slicing import SlicerUnavailable, find_slicer, produce_artifact, slice_mes
 
 log = logging.getLogger(__name__)
 
+# Large enough to mean "no cap" for a catalogue of about a dozen questions.
+UNCAPPED = 999
+
 app = FastAPI(
     title="Print shop worker",
     version="0.1.0",
@@ -67,6 +70,15 @@ class AnswersRequest(BaseModel):
 class AnswersResponse(BaseModel):
     requirements: Requirements
     follow_ups: list[FollowUp]
+    newly_relevant: list[FollowUp] = Field(
+        default_factory=list,
+        description=(
+            "Questions that only became applicable because of the answers just given — asking "
+            "about load duration once we know there is a load, say. These are worth a second "
+            "round; the rest of follow_ups is just the lower-priority tail and asking it turns "
+            "a short form into a long one."
+        ),
+    )
 
 
 class RecommendRequest(BaseModel):
@@ -205,8 +217,18 @@ def intake(body: IntakeRequest) -> IntakeResponse:
 
 @app.post("/intake/answers", response_model=AnswersResponse)
 def intake_answers(body: AnswersRequest) -> AnswersResponse:
+    # Which questions applied before the answers, ignoring the display cap, so that "newly
+    # relevant" means genuinely unlocked rather than merely promoted up the list.
+    applicable_before = {q.field for q in next_questions(body.requirements, limit=UNCAPPED)}
+
     updated = apply_answers(body.requirements, body.answers)
-    return AnswersResponse(requirements=updated, follow_ups=next_questions(updated))
+    applicable_after = next_questions(updated, limit=UNCAPPED)
+
+    return AnswersResponse(
+        requirements=updated,
+        follow_ups=next_questions(updated),
+        newly_relevant=[q for q in applicable_after if q.field not in applicable_before],
+    )
 
 
 @app.post("/recommend", response_model=Recommendation)
