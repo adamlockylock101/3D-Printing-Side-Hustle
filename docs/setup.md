@@ -10,6 +10,21 @@ owns customers, orders and payments.
 - Postgres — local, [Neon](https://neon.tech) or [Supabase](https://supabase.com)
 - Optional but recommended: Bambu Studio or OrcaSlicer, for real slicing rather than estimates
 
+## The quick way (local development)
+
+```bash
+scripts/devstack.sh up        # Postgres, worker and storefront, with URLs printed
+scripts/devstack.sh seed      # realistic orders, put through the real customer flow
+scripts/devstack.sh restart   # after changing worker code — it does not hot-reload
+scripts/devstack.sh down
+```
+
+The seed drives the actual HTTP endpoints rather than writing rows straight into the database.
+That is deliberate: seed data inserted directly hides exactly the bugs seeding is meant to
+expose, and three real ones turned up this way.
+
+The rest of this page is the manual setup, and what each variable changes.
+
 ## First run
 
 ```bash

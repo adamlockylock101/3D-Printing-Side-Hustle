@@ -75,7 +75,13 @@ export default async function OrderPage({ params }: { params: Promise<{ token: s
 
       {order.quote && (
         <section className="card">
-          <h2 className="font-semibold">What we&rsquo;re printing</h2>
+          <h2 className="font-semibold">
+            {["DECLINED", "REFUNDED"].includes(order.status)
+              ? "What you asked for"
+              : ["COMPLETED", "SHIPPED"].includes(order.status)
+                ? "What we printed"
+                : "What we\u2019re printing"}
+          </h2>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             <div>
               <dt className="text-xs uppercase tracking-wide text-muted">File</dt>
@@ -108,7 +114,11 @@ export default async function OrderPage({ params }: { params: Promise<{ token: s
 
       {recommendation && (
         <section className="card">
-          <h2 className="font-semibold">Why this material</h2>
+          <h2 className="font-semibold">
+            {["DECLINED", "REFUNDED"].includes(order.status)
+              ? "What we would have recommended"
+              : "Why this material"}
+          </h2>
           <div className="mt-3">
             <Rationale text={recommendation.rationale} />
           </div>
@@ -122,7 +132,9 @@ export default async function OrderPage({ params }: { params: Promise<{ token: s
 
       {lines.length > 0 && (
         <section className="card">
-          <h2 className="font-semibold">What you paid</h2>
+          <h2 className="font-semibold">
+            {["DECLINED", "REFUNDED"].includes(order.status) ? "What was quoted" : "What you paid"}
+          </h2>
           <table className="mt-3 w-full text-sm">
             <tbody>
               {lines.map((line) => (

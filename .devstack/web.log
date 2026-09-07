@@ -30,3 +30,18 @@
  GET /admin/orders/cmtrbj47o00147degppvl8gvu 200 in 1022ms
  POST /admin/orders/cmtrbj47o00147degppvl8gvu 200 in 76ms
  GET /admin 200 in 35ms
+ GET /quote 200 in 134ms
+ POST /api/analyse 200 in 45ms
+ POST /api/intake 200 in 29ms
+ POST /api/quote 200 in 36ms
+ POST /api/quote 200 in 127ms
+ GET /admin 200 in 62ms
+ POST /admin 200 in 26ms
+ GET /admin 200 in 42ms
+ GET /admin/orders/cmtrbj3y500077deg7s853hbm 200 in 71ms
+ POST /admin/orders/cmtrbj3y500077deg7s853hbm 200 in 48ms
+ ○ Compiling /orders/[token] ...
+ ✓ Compiled /orders/[token] in 548ms (701 modules)
+ GET /orders/cmtrbj3y500087degbkddkj2m 200 in 1091ms
+ ✓ Compiled in 1080ms (715 modules)
+ GET /orders/cmtrbj3y500087degbkddkj2m 200 in 83ms
