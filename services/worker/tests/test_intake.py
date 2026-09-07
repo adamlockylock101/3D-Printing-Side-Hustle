@@ -222,3 +222,43 @@ def test_quantity_is_read_from_natural_phrasing():
         ("Just the one", 1),
     ]:
         assert heuristic_extract(text).requirements.quantity == expected, text
+
+
+# --------------------------------------------------------------------------------------
+# Context-sensitive question ranking
+# --------------------------------------------------------------------------------------
+
+
+def test_fit_language_is_recognised_as_a_dimensional_requirement():
+    for text in (
+        "A bearing seat for a spindle",
+        "It needs to press fit onto the shaft",
+        "A bushing that mates with a 12 mm axle",
+    ):
+        assert heuristic_extract(text).requirements.precision.fit_critical is True, text
+
+
+def test_a_bearing_seat_gets_asked_about_tolerance_first():
+    """Static ranking put tolerance sixth of eleven, so a five-question form never asked it —
+    on the one part where the dimension is the entire point."""
+    result = heuristic_extract("A bearing seat for a spindle. Indoors.")
+    fields = [q.field for q in next_questions(result.requirements)]
+    assert fields[0] == "precision.tolerance_class"
+
+
+def test_heat_wording_promotes_the_temperature_question():
+    result = heuristic_extract("A mount that sits right next to the engine.")
+    fields = [q.field for q in next_questions(result.requirements)]
+    assert fields.index("thermal.max_service_c") < 2
+
+
+def test_a_display_piece_is_not_interrogated_about_load():
+    result = heuristic_extract("A display model of a ship for my shelf.")
+    fields = [q.field for q in next_questions(result.requirements)]
+    assert "load.type" not in fields[:2]
+    assert "aesthetics.visible" in fields or result.requirements.aesthetics.visible is not None
+
+
+def test_ranking_without_any_description_still_works():
+    fields = [q.field for q in next_questions(Requirements())]
+    assert fields[0] in {"load.type", "lifecycle"}

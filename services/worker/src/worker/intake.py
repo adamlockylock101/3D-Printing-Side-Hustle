@@ -163,6 +163,11 @@ _LOAD_WORDS = {
     LoadType.TENSION: r"pull|tension|hang|hanging|suspend",
     LoadType.COMPRESSION: r"compress|squash|press|weight on|stand on|foot",
 }
+_FIT_CRITICAL = (
+    r"bearing|press[- ]?fit|interference fit|mates? with|mating|slots? into|slides? into|"
+    r"snug|shaft|spindle|bushing|bush\b|axle|gear\b|thread(?:ed)?\b|tolerance|precise|"
+    r"precision|line up|lines up|has to fit|must fit|exact"
+)
 _PROTOTYPE = r"prototype|proto\b|mock ?up|test fit|fit check|checking the fit|trial"
 _END_USE = r"final|production|end use|end-use|customer|sell|selling|for good|permanent"
 _COSMETIC = r"display|decorat|ornament|cosplay|prop\b|model\b|figurine|desk toy|show"
@@ -228,6 +233,15 @@ def heuristic_extract(raw_text: str) -> IntakeResult:
         matched = next(g for g in qty_match.groups() if g)
         quantity = max(1, int(matched))
 
+    # "bearing seat", "press fit", "mates with" all mean the dimension is the point of the
+    # part. Without this the tolerance question ranks below the generic ones and gets cut.
+    precision = Precision()
+    if _search(_FIT_CRITICAL, text):
+        precision = Precision(fit_critical=True)
+        assumptions.append(
+            "Assumed the fit matters dimensionally, because of how you described the part."
+        )
+
     brittleness = None
     if _search(r"must not|can't break|cannot break|shatter|snap|brittle|flex|bend without", text):
         brittleness = BrittlenessTolerance.MUST_NOT_SHATTER
@@ -248,7 +262,7 @@ def heuristic_extract(raw_text: str) -> IntakeResult:
         brittleness_tolerance=brittleness,
         thermal=Thermal(max_service_c=max_temp, sunlight_hot_car=hot_car),
         environment=Environment(outdoor_uv=outdoor, moisture=moisture),
-        precision=Precision(),
+        precision=precision,
         aesthetics=Aesthetics(),
         cost_sensitivity=cost,
         lead_time=lead,
@@ -502,13 +516,70 @@ def _catalogue(req: Requirements) -> list[tuple[float, FollowUp]]:
     return candidates
 
 
+# Words in the customer's own description that make a particular question far more worth
+# asking. A static ranking asks a bearing-seat customer about UV before tolerance.
+_CONTEXT_BOOSTS: tuple[tuple[str, str, float], ...] = (
+    (_FIT_CRITICAL, "precision.tolerance_class", 0.5),
+    (r"hot|heat|warm|engine|oven|boiler|radiator|steam|sun\b|summer", "thermal.max_service_c", 0.4),
+    (_OUTDOOR, "environment.outdoor_uv", 0.4),
+    (_WATER + "|" + _SPLASH, "environment.moisture", 0.4),
+    (r"strong|strength|load|weight|hold|support|carry|force|stress", "load.type", 0.3),
+    (r"break|snap|crack|shatter|brittle|flex|bend", "brittleness_tolerance", 0.3),
+    (r"cheap|budget|cost|price|expensive|afford", "cost_sensitivity", 0.3),
+    (r"looks?|colour|color|finish|show|display|visible|paint", "aesthetics.visible", 0.3),
+)
+
+
+# Questions that stop being worth the customer's attention once we know what the part is for.
+# Asking someone printing a display piece how much load it carries wastes one of five slots.
+_LIFECYCLE_DAMPING: dict[Lifecycle, tuple[tuple[str, float], ...]] = {
+    Lifecycle.COSMETIC: (
+        ("load.type", -0.6),
+        ("load.duration", -0.6),
+        ("load.qualitative", -0.6),
+        ("brittleness_tolerance", -0.3),
+        ("thermal.max_service_c", -0.4),
+    ),
+    Lifecycle.FIT_CHECK: (
+        ("load.type", -0.5),
+        ("load.duration", -0.5),
+        ("load.qualitative", -0.5),
+        ("thermal.max_service_c", -0.4),
+        ("environment.outdoor_uv", -0.4),
+        ("brittleness_tolerance", -0.3),
+    ),
+}
+
+
+def _context_boosts(req: Requirements) -> dict[str, float]:
+    """Weight adjustments from the customer's own wording and the stage the part is at."""
+    boosts: dict[str, float] = {}
+
+    text = req.raw_text or ""
+    if text:
+        for pattern, field, boost in _CONTEXT_BOOSTS:
+            if _search(pattern, text):
+                boosts[field] = boosts.get(field, 0.0) + boost
+
+    for field, damping in _LIFECYCLE_DAMPING.get(req.lifecycle, ()):  # type: ignore[arg-type]
+        boosts[field] = boosts.get(field, 0.0) + damping
+
+    return boosts
+
+
 def next_questions(req: Requirements, limit: int = MAX_FOLLOW_UPS) -> list[FollowUp]:
     """The unanswered questions that would most change the recommendation, highest impact first.
 
-    Ordered by decision impact rather than schema order, and capped: an intake form that asks
-    twelve questions gets abandoned, and the last seven rarely change the answer anyway.
+    Ranked by decision impact rather than schema order, nudged by what the customer actually
+    wrote, and capped: an intake form that asks twelve questions gets abandoned, and the last
+    seven rarely change the answer anyway.
     """
-    ranked = sorted(_catalogue(req), key=lambda item: item[0], reverse=True)
+    boosts = _context_boosts(req)
+    ranked = sorted(
+        _catalogue(req),
+        key=lambda item: item[0] + boosts.get(item[1].field, 0.0),
+        reverse=True,
+    )
     return [follow_up for _, follow_up in ranked[:limit]]
 
 

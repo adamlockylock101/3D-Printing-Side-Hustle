@@ -3,48 +3,30 @@
    - Network:      http://192.0.2.2:3000
 
  ✓ Starting...
- ✓ Ready in 1375ms
+ ✓ Ready in 1289ms
  ○ Compiling / ...
- ✓ Compiled / in 1326ms (588 modules)
- GET / 200 in 1655ms
- GET / 200 in 37ms
- GET / 200 in 25ms
+ ✓ Compiled / in 1121ms (588 modules)
+ GET / 200 in 90ms
  ○ Compiling /quote ...
- ✓ Compiled /quote in 1418ms (629 modules)
- GET /quote 200 in 1651ms
- ○ Compiling /api/analyse ...
- ✓ Compiled /api/analyse in 554ms (634 modules)
- POST /api/analyse 200 in 693ms
- ✓ Compiled /api/intake in 445ms (637 modules)
- POST /api/intake 200 in 550ms
- ✓ Compiled /api/intake/answers in 233ms (639 modules)
- POST /api/intake/answers 200 in 264ms
- ✓ Compiled /api/quote in 245ms (645 modules)
- POST /api/quote 200 in 378ms
- ○ Compiling /api/checkout ...
- ✓ Compiled /api/checkout in 693ms (847 modules)
- POST /api/checkout 200 in 777ms
- ○ Compiling /orders/[token] ...
- ✓ Compiled /orders/[token] in 502ms (863 modules)
- GET /orders/cmtrbrxnk00087d02ri0kagz9 200 in 1414ms
- GET / 200 in 33ms
- GET /quote 200 in 107ms
- ✓ Compiled /materials in 401ms (865 modules)
- GET /materials 200 in 557ms
+ ✓ Compiled /quote in 675ms (613 modules)
+ GET /quote 200 in 894ms
+ ✓ Compiled /api/analyse in 399ms (632 modules)
+ POST /api/analyse 200 in 502ms
+ ✓ Compiled /api/intake in 262ms (635 modules)
+ POST /api/intake 200 in 321ms
+ GET /quote 200 in 114ms
+ POST /api/analyse 200 in 26ms
+ POST /api/intake 200 in 16ms
+ ✓ Compiled /api/intake/answers in 178ms (637 modules)
+ POST /api/intake/answers 200 in 215ms
+ ✓ Compiled /api/quote in 237ms (643 modules)
+ POST /api/quote 200 in 340ms
  ○ Compiling /admin ...
- ✓ Compiled /admin in 771ms (906 modules)
- GET /admin 200 in 990ms
- GET /quote 200 in 101ms
- POST /api/analyse 200 in 39ms
- GET /orders/cmtrbrxnk00087d02ri0kagz9 200 in 89ms
- GET /orders/does-not-exist 404 in 47ms
- ✓ Compiled in 1326ms (654 modules)
- GET /quote 200 in 201ms
- ✓ Compiled /api/analyse in 132ms (336 modules)
- POST /api/analyse 200 in 292ms
- ✓ Compiled /api/intake in 85ms (339 modules)
- POST /api/intake 200 in 131ms
- ✓ Compiled /api/intake/answers in 99ms (341 modules)
- POST /api/intake/answers 200 in 131ms
- ✓ Compiled /api/quote in 311ms (347 modules)
- POST /api/quote 200 in 358ms
+ ✓ Compiled /admin in 565ms (685 modules)
+ GET /admin 200 in 730ms
+ POST /admin 200 in 132ms
+ GET /admin 200 in 29ms
+ ✓ Compiled /admin/orders/[id] in 439ms (701 modules)
+ GET /admin/orders/cmtrbj47o00147degppvl8gvu 200 in 1022ms
+ POST /admin/orders/cmtrbj47o00147degppvl8gvu 200 in 76ms
+ GET /admin 200 in 35ms
