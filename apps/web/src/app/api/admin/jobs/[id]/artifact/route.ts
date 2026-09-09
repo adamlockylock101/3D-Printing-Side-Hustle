@@ -49,12 +49,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     );
   }
 
-  await record("job", job.id, "job.artifact_produced", { materialId: job.materialId });
+  // The format follows the slicer, not this route: PrusaSlicer emits G-code, Bambu Studio and
+  // Orca emit a 3mf project. Hardcoding either one hands the operator a file whose name lies
+  // about its contents, which no printer will accept.
+  const upstreamType = response.headers.get("content-type") ?? "application/octet-stream";
+  const extension = upstreamType.includes("3mf") ? "3mf" : "gcode";
+  const stem = job.order.quote.upload.filename.replace(/\.[^.]+$/, "");
+  const filename = `${stem}-${job.materialId}.${extension}`;
 
-  const filename = `${job.order.quote.upload.filename.replace(/\.[^.]+$/, "")}-${job.materialId}.3mf`;
+  await record("job", job.id, "job.artifact_produced", {
+    materialId: job.materialId,
+    format: extension,
+  });
+
   return new NextResponse(response.body, {
     headers: {
-      "content-type": "model/3mf",
+      "content-type": upstreamType,
       "content-disposition": `attachment; filename="${filename}"`,
     },
   });
