@@ -7,6 +7,19 @@ import pytest
 import trimesh
 
 
+@pytest.fixture(autouse=True)
+def deterministic_slicing(request, monkeypatch):
+    """Force the estimator unless a test explicitly asks for the real slicer.
+
+    Otherwise the suite behaves differently depending on whether PrusaSlicer happens to be
+    installed — slower, and testing something other than what CI tests. Tests that want the
+    real thing carry the `real_slicer` marker and skip when it is absent.
+    """
+    if request.node.get_closest_marker("real_slicer"):
+        return
+    monkeypatch.setattr("worker.slicing.find_slicer", lambda: None)
+
+
 def _export(mesh: trimesh.Trimesh, suffix: str = ".stl") -> Path:
     path = Path(tempfile.mkdtemp()) / f"part{suffix}"
     mesh.export(path)

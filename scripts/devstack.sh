@@ -26,6 +26,11 @@ export NEXT_PUBLIC_SITE_URL="http://localhost:${WEB_PORT}"
 export ADMIN_TOKEN="${ADMIN_TOKEN:-demo-token}"
 export PRINTSHOP_ROOT="$ROOT"
 
+# Real slicing when a slicer is on the PATH. Without this the worker falls back to the geometry
+# estimator, which underprices tall parts badly — see docs/slicing.md.
+export SLICER_BIN="${SLICER_BIN:-$(command -v prusa-slicer || command -v orca-slicer || true)}"
+if [ -z "$SLICER_BIN" ]; then unset SLICER_BIN; fi
+
 mkdir -p "$RUN"
 
 pg_running() { "$PG_BIN/pg_isready" -h 127.0.0.1 -p "$PG_PORT" -q 2>/dev/null; }
@@ -93,6 +98,7 @@ case "${1:-up}" in
     echo "  storefront   http://localhost:$WEB_PORT"
     echo "  operator     http://localhost:$WEB_PORT/admin   (token: $ADMIN_TOKEN)"
     echo "  worker docs  $WORKER_URL/docs"
+    echo "  slicer       ${SLICER_BIN:-none (quotes will be estimates)}"
     ;;
   down)
     stop_services

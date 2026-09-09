@@ -15,11 +15,14 @@
 #   water_absorption_pct 24 h immersion, % by mass
 #   printability         1-5 on a well-tuned machine (5 = forgiving)
 #   warp                 low | medium | high
+#   nozzle_c / bed_c     starting print temperatures; null for non-FDM processes
+#   max_volumetric_mm3_s how fast the hotend can actually melt it on a 0.4 mm nozzle. This, not
+#                        the machine's top speed, is what limits print time on a fast printer.
 #   process_capability_mm nominal dimensional tolerance on a tuned machine
 #   tolerance_floor_mm    tightest tolerance the process can be pushed to; below this, decline
 #                         or escalate to another process rather than promise something you cannot hold
 
-version: 0.1.0
+version: 0.3.0
 process_defaults:
   fdm_04_nozzle:
     process_capability_mm: 0.20
@@ -45,6 +48,9 @@ materials:
     water_absorption_pct: 0.5
     attacked_by: [solvents, acids, bases]
     density_g_cm3: 1.24
+    nozzle_c: 210
+    bed_c: 60
+    max_volumetric_mm3_s: 21
     cost_per_kg: 22
     printability: 5
     warp: low
@@ -70,6 +76,9 @@ materials:
     water_absorption_pct: 0.5
     attacked_by: [solvents, acids, bases]
     density_g_cm3: 1.24
+    nozzle_c: 220
+    bed_c: 60
+    max_volumetric_mm3_s: 18
     cost_per_kg: 28
     printability: 5
     warp: low
@@ -92,6 +101,9 @@ materials:
     water_absorption_pct: 0.3
     attacked_by: [solvents, acids]
     density_g_cm3: 1.27
+    nozzle_c: 240
+    bed_c: 80
+    max_volumetric_mm3_s: 14
     cost_per_kg: 24
     printability: 4
     warp: low
@@ -116,6 +128,9 @@ materials:
     water_absorption_pct: 0.4
     attacked_by: [solvents, fuels]
     density_g_cm3: 1.07
+    nozzle_c: 260
+    bed_c: 100
+    max_volumetric_mm3_s: 16
     cost_per_kg: 32
     printability: 2
     warp: high
@@ -138,6 +153,9 @@ materials:
     water_absorption_pct: 0.4
     attacked_by: [solvents, fuels]
     density_g_cm3: 1.04
+    nozzle_c: 250
+    bed_c: 100
+    max_volumetric_mm3_s: 16
     cost_per_kg: 24
     printability: 2
     warp: high
@@ -160,6 +178,9 @@ materials:
     water_absorption_pct: 0.35
     attacked_by: [solvents, bases]
     density_g_cm3: 1.20
+    nozzle_c: 280
+    bed_c: 110
+    max_volumetric_mm3_s: 12
     cost_per_kg: 48
     printability: 2
     warp: high
@@ -182,6 +203,9 @@ materials:
     water_absorption_pct: 1.8
     attacked_by: [acids]
     density_g_cm3: 1.18
+    nozzle_c: 285
+    bed_c: 100
+    max_volumetric_mm3_s: 10
     cost_per_kg: 85
     printability: 2
     warp: medium
@@ -206,6 +230,9 @@ materials:
     water_absorption_pct: 0.9
     attacked_by: [acids]
     density_g_cm3: 1.01
+    nozzle_c: 260
+    bed_c: 90
+    max_volumetric_mm3_s: 12
     cost_per_kg: 60
     printability: 2
     warp: medium
@@ -228,6 +255,9 @@ materials:
     water_absorption_pct: 0.02
     attacked_by: []
     density_g_cm3: 0.90
+    nozzle_c: 235
+    bed_c: 90
+    max_volumetric_mm3_s: 10
     cost_per_kg: 55
     printability: 1
     warp: high
@@ -252,6 +282,9 @@ materials:
     water_absorption_pct: 0.6
     attacked_by: [solvents, fuels]
     density_g_cm3: 1.21
+    nozzle_c: 225
+    bed_c: 50
+    max_volumetric_mm3_s: 4
     cost_per_kg: 38
     printability: 3
     warp: low
@@ -274,6 +307,9 @@ materials:
     water_absorption_pct: 0.5
     attacked_by: [solvents, alcohols]
     density_g_cm3: 1.15
+    nozzle_c: null
+    bed_c: null
+    max_volumetric_mm3_s: null
     cost_per_kg: 45
     printability: 3
     warp: low
@@ -298,6 +334,9 @@ materials:
     water_absorption_pct: 0.6
     attacked_by: [solvents, alcohols]
     density_g_cm3: 1.15
+    nozzle_c: null
+    bed_c: null
+    max_volumetric_mm3_s: null
     cost_per_kg: 65
     printability: 3
     warp: low

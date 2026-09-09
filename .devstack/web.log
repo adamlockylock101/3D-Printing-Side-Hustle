@@ -3,45 +3,9 @@
    - Network:      http://192.0.2.2:3000
 
  ✓ Starting...
- ✓ Ready in 1289ms
+ ✓ Ready in 4s
  ○ Compiling / ...
- ✓ Compiled / in 1121ms (588 modules)
- GET / 200 in 90ms
- ○ Compiling /quote ...
- ✓ Compiled /quote in 675ms (613 modules)
- GET /quote 200 in 894ms
- ✓ Compiled /api/analyse in 399ms (632 modules)
- POST /api/analyse 200 in 502ms
- ✓ Compiled /api/intake in 262ms (635 modules)
- POST /api/intake 200 in 321ms
- GET /quote 200 in 114ms
- POST /api/analyse 200 in 26ms
- POST /api/intake 200 in 16ms
- ✓ Compiled /api/intake/answers in 178ms (637 modules)
- POST /api/intake/answers 200 in 215ms
- ✓ Compiled /api/quote in 237ms (643 modules)
- POST /api/quote 200 in 340ms
- ○ Compiling /admin ...
- ✓ Compiled /admin in 565ms (685 modules)
- GET /admin 200 in 730ms
- POST /admin 200 in 132ms
- GET /admin 200 in 29ms
- ✓ Compiled /admin/orders/[id] in 439ms (701 modules)
- GET /admin/orders/cmtrbj47o00147degppvl8gvu 200 in 1022ms
- POST /admin/orders/cmtrbj47o00147degppvl8gvu 200 in 76ms
- GET /admin 200 in 35ms
- GET /quote 200 in 134ms
- POST /api/analyse 200 in 45ms
- POST /api/intake 200 in 29ms
- POST /api/quote 200 in 36ms
- POST /api/quote 200 in 127ms
- GET /admin 200 in 62ms
- POST /admin 200 in 26ms
- GET /admin 200 in 42ms
- GET /admin/orders/cmtrbj3y500077deg7s853hbm 200 in 71ms
- POST /admin/orders/cmtrbj3y500077deg7s853hbm 200 in 48ms
- ○ Compiling /orders/[token] ...
- ✓ Compiled /orders/[token] in 548ms (701 modules)
- GET /orders/cmtrbj3y500087degbkddkj2m 200 in 1091ms
- ✓ Compiled in 1080ms (715 modules)
- GET /orders/cmtrbj3y500087degbkddkj2m 200 in 83ms
+ ✓ Compiled / in 3.9s (588 modules)
+ GET / 200 in 1681ms
+ GET / 200 in 870ms
+ GET / 200 in 46ms

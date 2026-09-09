@@ -1,16 +1,11 @@
-INFO:     Started server process [4454]
+INFO:     Started server process [1958]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:42238 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37806 - "POST /intake HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37264 - "POST /analyse HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37264 - "POST /intake HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37264 - "POST /analyse HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37264 - "POST /intake HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37264 - "POST /intake/answers HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37264 - "POST /quote HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50936 - "POST /analyse HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50936 - "POST /intake HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50936 - "POST /quote HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50272 - "POST /quote HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45638 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46618 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46620 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52310 - "POST /analyse HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52322 - "POST /quote HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41144 - "POST /analyse HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41156 - "POST /slice HTTP/1.1" 200 OK

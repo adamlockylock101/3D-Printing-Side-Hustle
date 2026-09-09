@@ -30,6 +30,9 @@ packages = ["src/worker"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "real_slicer: exercises an installed slicer binary; skipped when none is present",
+]
 
 [tool.ruff]
 line-length = 100

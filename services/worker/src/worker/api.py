@@ -23,7 +23,15 @@ from .pricing import build_quote
 from .safety import screen
 from .schemas import GeometryReport, Quote, Recommendation, Requirements
 from .selection import select_material
-from .slicing import SlicerUnavailable, find_slicer, produce_artifact, slice_mesh
+from .slicing import (
+    SlicerUnavailable,
+    artifact_suffix,
+    find_slicer,
+    produce_artifact,
+    profile_dir,
+    slice_mesh,
+    slicer_family,
+)
 
 log = logging.getLogger(__name__)
 
@@ -120,8 +128,19 @@ def health() -> dict[str, object]:
         "status": "ok",
         "materials_table": table_version(),
         "slicer": find_slicer() or "estimator only",
+        "slicer_profiles": _profile_status(),
         "intake_model": "claude" if os.environ.get("ANTHROPIC_API_KEY") else "heuristic",
     }
+
+
+def _profile_status() -> str:
+    """Whether the slicer has machine-specific profiles or is running on its own defaults."""
+    binary = find_slicer()
+    if binary is None:
+        return "n/a"
+    directory = profile_dir(slicer_family(binary))
+    count = len(list(directory.glob("*.ini"))) + len(list(directory.glob("*.json")))
+    return f"{count} in {directory}" if count else f"none found in {directory}"
 
 
 @app.get("/config")
@@ -300,16 +319,18 @@ def slice_for_print(body: SliceRequest) -> FileResponse:
         raise HTTPException(status_code=400, detail=f"Unknown material {body.material_id!r}")
 
     safe_ref = "".join(c for c in body.job_ref if c.isalnum() or c in "-_")[:48] or "job"
-    destination = storage.upload_dir() / "artifacts" / f"{safe_ref}-{material.id}.3mf"
+    # A Bambu needs a 3mf project; a Prusa takes G-code. The slicer in use decides.
+    suffix = artifact_suffix()
+    filename = f"{safe_ref}-{material.id}{suffix}"
+    destination = storage.upload_dir() / "artifacts" / filename
 
     try:
         produce_artifact(path, material, body.settings, destination)
     except SlicerUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    return FileResponse(
-        destination, media_type="model/3mf", filename=f"{safe_ref}-{material.id}.3mf"
-    )
+    media_type = "model/3mf" if suffix == ".3mf" else "text/x.gcode"
+    return FileResponse(destination, media_type=media_type, filename=filename)
 
 
 @app.post("/admin/reload-config")

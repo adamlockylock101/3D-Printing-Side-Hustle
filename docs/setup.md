@@ -85,16 +85,31 @@ version it used, so an old quote stays reconstructable.
 
 ## Slicing
 
+See [slicing.md](slicing.md) for the full picture, including how far off the estimator is when
+no slicer is available.
+
 ```bash
+# PrusaSlicer, from the distro (Linux)
+apt-get install -y --no-install-recommends prusa-slicer
+
+# Or point at an existing install
 export SLICER_BIN=/Applications/BambuStudio.app/Contents/MacOS/BambuStudio   # macOS
-export SLICER_BIN=/usr/bin/orca-slicer                                       # Linux
-export SLICER_PROFILES=config/slicer-profiles
 ```
 
-Put your exported machine profile at `config/slicer-profiles/machine.json` and a process profile
-per material at `config/slicer-profiles/<material_id>.json` — so `petg.json`, `asa.json`, matching
-the ids in `data/materials.yaml`. Without them the slicer runs on its own defaults, which will not
-match your printer.
+The worker also finds a slicer on the `PATH`, and `scripts/devstack.sh` exports `SLICER_BIN`
+for you. Check what is actually in use with `curl localhost:8000/health`.
+
+Profiles are **generated, not hand-written**:
+
+```bash
+scripts/gen_slicer_profiles.py
+```
+
+That writes one `.ini` per stocked material into `config/slicer-profiles/prusaslicer/`, taking
+printer geometry from `config/shop.yaml` and density, temperatures and flow limits from
+`data/materials.yaml`. Regenerate after editing either. If you use OrcaSlicer or Bambu Studio
+instead, put their JSON bundles in `config/slicer-profiles/orca/` as `machine.json` and
+`<material_id>.json`.
 
 Pin the slicer version and keep the profiles in this repo. A slicer upgrade that changes profile
 semantics will change your quoted times, and you want that to be a visible commit.
