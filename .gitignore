@@ -27,3 +27,6 @@ out/
 # Build artefacts
 *.tsbuildinfo
 next-env.d.ts
+
+# Dev stack runtime state
+.devstack/
