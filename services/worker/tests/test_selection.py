@@ -321,11 +321,13 @@ def test_geometry_warnings_are_carried_into_the_recommendation():
         triangle_count=1000,
         is_watertight=False,
         fits_build_volume=False,
-        warnings=["Mesh is not watertight"],
+        warnings=["Mesh is not watertight", "It does not fit the build volume."],
     )
     rec = select_material(Requirements(), geometry=geometry, caps=FULL_SHOP)
     assert "Mesh is not watertight" in rec.warnings
-    assert any("build volume" in w for w in rec.warnings)
+    # Said once, by the geometry check. The engine used to add its own differently-worded copy,
+    # which the storefront's de-duplication could not recognise as the same warning.
+    assert sum("build volume" in w for w in rec.warnings) == 1
 
 
 def test_unstocked_winner_is_flagged():

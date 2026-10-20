@@ -43,7 +43,9 @@ def upload(path: Path) -> dict:
 
 
 def build_meshes(into: Path) -> dict[str, Path]:
+    import numpy as np
     import trimesh
+    from shapely.geometry import Polygon
 
     def write(name: str, mesh) -> Path:
         target = into / name
@@ -64,7 +66,41 @@ def build_meshes(into: Path) -> dict[str, Path]:
         "gear-blank.stl": write(
             "gear-blank.stl", trimesh.creation.cylinder(radius=22, height=8, sections=96)
         ),
+        "hole-plate.stl": write("hole-plate.stl", _hole_plate(np, trimesh)),
+        "l-bracket.stl": write("l-bracket.stl", _l_bracket(np, trimesh, Polygon)),
     }
+
+
+def _hole_plate(np, trimesh):
+    """80 x 50 x 14 mm: upright holes of 3, 4 and 8 mm, and 3 and 6 mm holes through the side.
+
+    Built with real boolean cuts so it is one watertight solid, as a CAD export would be.
+    """
+    plate = trimesh.creation.box(extents=(80, 50, 14))
+    plate.apply_translation((40, 25, 7))
+    cuts = []
+    for x, d in ((12, 3), (28, 4), (46, 8)):
+        cut = trimesh.creation.cylinder(radius=d / 2, height=30, sections=64)
+        cut.apply_translation((x, 25, 7))
+        cuts.append(cut)
+    for x, d in ((62, 3), (72, 6)):
+        cut = trimesh.creation.cylinder(radius=d / 2, height=70, sections=64)
+        cut.apply_transform(trimesh.transformations.rotation_matrix(np.pi / 2, [1, 0, 0]))
+        cut.apply_translation((x, 25, 7))
+        cuts.append(cut)
+    return trimesh.boolean.difference([plate, *cuts], engine="manifold")
+
+
+def _l_bracket(np, trimesh, Polygon):
+    """A watertight L: an 80 x 60 x 6 mm base with a 6 mm web rising 50 mm, modelled upright.
+
+    Upright, a load on the web's tip bends the layer bonds at its root. On its side, every
+    layer is the whole L. Unlike sign-bracket.stl this is one clean solid.
+    """
+    profile = Polygon([(0, 0), (80, 0), (80, 6), (6, 6), (6, 56), (0, 56)])
+    bracket = trimesh.creation.extrude_polygon(profile, 60)
+    bracket.apply_transform(trimesh.transformations.rotation_matrix(np.pi / 2, [1, 0, 0]))
+    return bracket
 
 
 CASES = [
@@ -115,7 +151,47 @@ CASES = [
         },
         "email": "dan.whitlock@example.com", "person": "Dan Whitlock", "notes": "",
     },
+    {
+        # Trips the hole check: small upright holes print undersize, side holes go oval.
+        "file": "hole-plate.stl",
+        "text": "Mounting plate for a small gearbox. M3 and M4 bolts go through the upright "
+                "holes and dowel pins run through the side ones, so they need to fit. Indoors.",
+        "answers": {
+            "lifecycle": "end_use", "load.type": "clamping", "load.qualitative": "moderate",
+            "load.duration": "sustained", "thermal.max_service_c": "30",
+            "precision.tolerance_class": "tight", "aesthetics.visible": "false",
+        },
+        "email": "priya.nair@example.com", "person": "Priya Nair", "notes": "",
+    },
+    {
+        # Trips the load check: modelled upright, it is weakest across its layers.
+        "file": "l-bracket.stl",
+        "text": "Shelf bracket. Screws to the wall and holds up a shelf of books, so it must "
+                "not snap. It's in the living room, so one face is on show and should look tidy.",
+        "answers": {
+            "lifecycle": "end_use", "load.type": "bending", "load.qualitative": "heavy",
+            "load.duration": "sustained", "thermal.max_service_c": "25",
+            "precision.tolerance_class": "standard", "aesthetics.visible": "true",
+            "aesthetics.cosmetic_face": "left",
+        },
+        "email": "tom.ferris@example.com", "person": "Tom Ferris", "notes": "",
+    },
 ]
+
+
+def describe(quote: dict) -> None:
+    """What the design review said, as the customer receives it."""
+    geometry = quote["geometry"]
+    orientation = geometry.get("orientation") or {}
+    print(f"    orientation: {orientation.get('face_down', '?')} face down")
+    for finding in geometry.get("findings", []):
+        band = f" [{finding['band']}]" if finding.get("band") else ""
+        print(f"    {finding['severity']:8s} {finding['check']:15s}{band} {finding['message']}")
+        if finding["fix"] != "Nothing to change.":
+            print(f"    {'':24s} fix: {finding['fix']}")
+    q = quote.get("quote") or {}
+    if q.get("requires_manual_review"):
+        print(f"    manual review: {q.get('manual_review_reason')}")
 
 
 def main() -> None:
@@ -156,6 +232,7 @@ def main() -> None:
                 f"(recommended {quote['recommendation']['primary']['name']})  "
                 f"/orders/{order['orderToken']}"
             )
+            describe(quote)
 
     print(
         "\nOrders are in AWAITING_PAYMENT because Stripe is not configured here. "

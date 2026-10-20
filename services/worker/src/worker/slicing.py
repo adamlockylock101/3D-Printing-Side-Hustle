@@ -29,7 +29,9 @@ from pathlib import Path
 from typing import Any
 
 from .config import repo_root, shop_config
+from .geometry import load_mesh
 from .materials import Material
+from .orientation import orient_mesh
 from .schemas import GeometryReport, SliceResult
 
 SLICER_CANDIDATES = ("prusa-slicer", "prusaslicer", "bambu-studio", "orca-slicer", "orcaslicer")
@@ -102,6 +104,21 @@ def _bed_centre() -> tuple[float, float]:
 # --------------------------------------------------------------------------------------
 
 
+def extruded_volume_mm3(geometry: GeometryReport, settings: dict[str, Any]) -> float:
+    """Plastic laid down for the part itself: the shell solid, the core at the infill fraction.
+
+    Independent of orientation, which is why orientation ranking can share it.
+    """
+    walls = int(settings.get("walls", 3))
+    infill = float(settings.get("infill_percent", 20)) / 100.0
+    extrusion_width = 0.45
+
+    shell_thickness = walls * extrusion_width
+    shell_volume = min(geometry.surface_area_mm2 * shell_thickness, geometry.volume_mm3)
+    core_volume = max(geometry.volume_mm3 - shell_volume, 0.0)
+    return shell_volume + core_volume * infill
+
+
 def estimate(geometry: GeometryReport, material: Material, settings: dict[str, Any]) -> SliceResult:
     """Estimate time and mass from geometry alone.
 
@@ -109,15 +126,8 @@ def estimate(geometry: GeometryReport, material: Material, settings: dict[str, A
     thickness; whatever is left inside is filled at the infill fraction. Close enough to quote
     from when it is clearly labelled as an estimate and reviewed before it is committed to.
     """
-    walls = int(settings.get("walls", 3))
-    infill = float(settings.get("infill_percent", 20)) / 100.0
     layer_height = float(settings.get("layer_height_mm", 0.2))
-    extrusion_width = 0.45
-
-    shell_thickness = walls * extrusion_width
-    shell_volume = min(geometry.surface_area_mm2 * shell_thickness, geometry.volume_mm3)
-    core_volume = max(geometry.volume_mm3 - shell_volume, 0.0)
-    extruded_mm3 = shell_volume + core_volume * infill
+    extruded_mm3 = extruded_volume_mm3(geometry, settings)
 
     support_mm3 = 0.0
     if geometry.overhang_fraction > 0.05:
@@ -296,6 +306,21 @@ def _read_output_stats(
 # --------------------------------------------------------------------------------------
 
 
+def _oriented_mesh(mesh_path: Path, settings: dict[str, Any], tmp: Path) -> Path:
+    """The mesh turned to the face-down the quote was priced on, so the slice prints that.
+
+    The orientation travels in print_settings, which is what the approval route hands to /slice,
+    so the quote and the approved file cannot disagree about which way up the part goes.
+    """
+    face = settings.get("orientation")
+    if not face or face == "bottom":
+        return mesh_path
+    target = tmp / f"oriented-{face}.stl"
+    orient_mesh(load_mesh(mesh_path), str(face)).export(target)
+    return target
+
+
+
 def slice_mesh(
     mesh_path: str | Path,
     material: Material,
@@ -312,7 +337,8 @@ def slice_mesh(
 
     with tempfile.TemporaryDirectory() as tmp:
         output = Path(tmp) / f"quote{artifact_suffix(binary)}"
-        cmd = _build_command(binary, Path(mesh_path), material, settings, output)
+        oriented = _oriented_mesh(Path(mesh_path), settings, Path(tmp))
+        cmd = _build_command(binary, oriented, material, settings, output)
         try:
             subprocess.run(cmd, check=True, capture_output=True, timeout=SLICE_TIMEOUT_S, text=True)
             minutes, grams, support = _read_output_stats(output, material)
@@ -353,13 +379,19 @@ def produce_artifact(
         )
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    cmd = _build_command(binary, Path(mesh_path), material, settings, destination)
-    try:
-        subprocess.run(cmd, check=True, capture_output=True, timeout=SLICE_TIMEOUT_S, text=True)
-    except subprocess.CalledProcessError as exc:
-        raise SlicerUnavailable(f"The slicer failed: {exc.stderr or exc.stdout}".strip()) from exc
-    except (subprocess.SubprocessError, OSError) as exc:
-        raise SlicerUnavailable(f"The slicer could not be run: {exc}") from exc
+    with tempfile.TemporaryDirectory() as tmp:
+        oriented = _oriented_mesh(Path(mesh_path), settings, Path(tmp))
+        cmd = _build_command(binary, oriented, material, settings, destination)
+        try:
+            subprocess.run(
+                cmd, check=True, capture_output=True, timeout=SLICE_TIMEOUT_S, text=True
+            )
+        except subprocess.CalledProcessError as exc:
+            raise SlicerUnavailable(
+                f"The slicer failed: {exc.stderr or exc.stdout}".strip()
+            ) from exc
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise SlicerUnavailable(f"The slicer could not be run: {exc}") from exc
 
     if not destination.exists():
         raise SlicerUnavailable("The slicer produced no output file.")

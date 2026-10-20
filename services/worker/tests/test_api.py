@@ -289,3 +289,90 @@ def test_declaring_no_load_unlocks_no_load_questions():
     newly = {q["field"] for q in response["newly_relevant"]}
     assert "load.duration" not in newly
     assert "load.qualitative" not in newly
+
+
+# --------------------------------------------------------------------------------------
+# Design feedback through the quote
+# --------------------------------------------------------------------------------------
+
+
+def quote(path: Path, requirements: dict, **extra) -> dict:
+    upload_id = upload(path).json()["upload_id"]
+    return client.post(
+        "/quote", json={"upload_id": upload_id, "requirements": requirements, **extra}
+    ).json()
+
+
+BRACKET_UNDER_LOAD = {
+    "lifecycle": "end_use",
+    "load": {"type": "bending", "qualitative": "heavy"},
+    "thermal": {"max_service_c": 30},
+}
+
+
+def test_quote_carries_structured_findings_and_matching_warnings(l_bracket_stl: Path):
+    body = quote(l_bracket_stl, BRACKET_UNDER_LOAD)
+    geometry = body["geometry"]
+    checks = {f["check"] for f in geometry["findings"]}
+    assert {"orientation", "load_vs_layers"} <= checks
+    assert geometry["warnings"] == [f["message"] for f in geometry["findings"]]
+    # Every geometry line the recommendation repeats is one the page already has, verbatim.
+    repeated = [w for w in body["recommendation"]["warnings"] if w in geometry["warnings"]]
+    assert repeated == geometry["warnings"]
+
+
+def test_the_quote_is_priced_in_the_orientation_it_will_print(l_bracket_stl: Path):
+    body = quote(l_bracket_stl, BRACKET_UNDER_LOAD)
+    face = body["geometry"]["orientation"]["face_down"]
+    assert face in ("front", "back")
+    # The same face travels in print_settings, which is what approval hands to /slice.
+    assert body["recommendation"]["print_settings"]["orientation"] == face
+    assert body["recommendation"]["orientation_advice"].startswith("We will print it on its")
+
+
+def test_the_operator_can_override_the_orientation_and_it_reprices(l_bracket_stl: Path):
+    chosen = quote(l_bracket_stl, BRACKET_UNDER_LOAD)
+    forced = quote(l_bracket_stl, BRACKET_UNDER_LOAD, orientation="left")
+    assert forced["geometry"]["orientation"]["face_down"] == "left"
+    assert forced["geometry"]["orientation"]["overridden_by_operator"] is True
+    assert forced["recommendation"]["print_settings"]["orientation"] == "left"
+    assert forced["quote"]["print_minutes_each"] != chosen["quote"]["print_minutes_each"]
+
+
+def test_a_must_fix_finding_sends_the_quote_to_manual_review(l_bracket_stl: Path):
+    # On its left side the base stands across the layers: weak under 300 N in any material
+    # the engine might pick.
+    heavy = {**BRACKET_UNDER_LOAD, "load": {"type": "bending", "magnitude_n": 300}}
+    body = quote(l_bracket_stl, heavy, orientation="left")
+    strength = next(f for f in body["geometry"]["findings"] if f["check"] == "load_vs_layers")
+    assert strength["severity"] == "must_fix"
+    assert body["quote"]["requires_manual_review"] is True
+    assert body["quote"]["manual_review_reason"].startswith("Design check:")
+    # Manual review, not a decline: the customer still gets a price.
+    assert body["quote"]["total_price"] > 0
+
+
+def test_an_unknown_orientation_is_rejected(box_stl: Path):
+    upload_id = upload(box_stl).json()["upload_id"]
+    response = client.post(
+        "/quote", json={"upload_id": upload_id, "requirements": {}, "orientation": "sideways"}
+    )
+    assert response.status_code == 422
+
+
+def test_saying_looks_matter_unlocks_the_cosmetic_face_question():
+    first = client.post("/intake", json={"text": "A small part for a project."}).json()
+    response = client.post(
+        "/intake/answers",
+        json={"requirements": first["requirements"], "answers": {"aesthetics.visible": "true"}},
+    ).json()
+    assert "aesthetics.cosmetic_face" in {q["field"] for q in response["newly_relevant"]}
+
+    answered = client.post(
+        "/intake/answers",
+        json={
+            "requirements": response["requirements"],
+            "answers": {"aesthetics.cosmetic_face": "top"},
+        },
+    ).json()
+    assert answered["requirements"]["aesthetics"]["cosmetic_face"] == "top"

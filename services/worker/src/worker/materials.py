@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -123,3 +124,32 @@ def by_id(material_id: str) -> Material | None:
         if material.id == material_id:
             return material
     return None
+
+
+def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def design_rules(material: Material | None = None) -> dict[str, Any]:
+    """Thresholds for the design checks: the process defaults, with the material's own over them.
+
+    With no material — at upload, before anything has been recommended — the FDM defaults apply.
+    """
+    cfg = materials_config()
+    defaults = cfg.get("process_defaults", {})
+    process = material.process if material is not None else "fdm"
+    key = "resin_msla" if process.startswith("resin") else "fdm_04_nozzle"
+    # Resin has no design block of its own yet; the FDM rules are the closer approximation.
+    rules = defaults.get(key, {}).get("design") or defaults.get("fdm_04_nozzle", {}).get("design")
+    # A copy: callers may adjust what they get back, and must never edit the cached config.
+    rules = copy.deepcopy(rules or {})
+    if material is not None:
+        raw = next((m for m in cfg["materials"] if m["id"] == material.id), {})
+        rules = _merge(rules, raw.get("design") or {})
+    return rules

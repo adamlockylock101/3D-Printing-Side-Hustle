@@ -109,10 +109,21 @@ class Precision(BaseModel):
     min_feature_mm: float | None = None
 
 
+# The six faces of a part as the customer modelled it: +Z is the top, -Y the front.
+Face = Literal["bottom", "top", "front", "back", "left", "right"]
+
+
 class Aesthetics(BaseModel):
     visible: bool | None = None
     colour: str | None = None
     finish: Literal["as_printed", "smooth", "paintable"] | None = None
+    cosmetic_face: Face | None = Field(
+        default=None,
+        description=(
+            "The face that must look good, as modelled. Orientation keeps support off it, "
+            "because support always leaves a mark."
+        ),
+    )
 
 
 class Requirements(BaseModel):
@@ -165,6 +176,70 @@ class Requirements(BaseModel):
 # --------------------------------------------------------------------------------------
 
 
+class Severity(StrEnum):
+    INFO = "info"
+    ADVISE = "advise"
+    MUST_FIX = "must_fix"
+
+
+class FindingLocation(BaseModel):
+    """Where on the part a finding applies, in the coordinates the customer modelled it in."""
+
+    description: str
+    z_mm: float | None = Field(default=None, description="Height above the bed as printed")
+    bbox_min: tuple[float, float, float] | None = None
+    bbox_max: tuple[float, float, float] | None = None
+
+
+class DesignFinding(BaseModel):
+    """One thing about the design worth telling the customer, and what to do about it."""
+
+    check: str = Field(description="Stable id of the check that produced this, e.g. 'holes'")
+    severity: Severity
+    message: str = Field(description="One-line summary; this is what `warnings` carries")
+    measured: float | None = None
+    threshold: float | None = None
+    unit: str | None = None
+    location: FindingLocation | None = None
+    why: str = Field(description="Why it matters, in plain English")
+    fix: str = Field(description="What to change")
+    band: Literal["adequate", "marginal", "weak"] | None = Field(
+        default=None,
+        description="For strength findings, a band instead of a number the table cannot back",
+    )
+    operator_note: str | None = Field(
+        default=None,
+        description=(
+            "Detail for the operator only, such as the numeric safety factor. The storefront "
+            "strips it before anything reaches the customer."
+        ),
+    )
+
+
+class OrientationCandidate(BaseModel):
+    face_down: Face
+    support_mm3: float
+    support_fraction: float = Field(description="Share of the surface that needs support")
+    bed_contact_mm2: float
+    height_mm: float
+    time_index: float = Field(description="Relative print time, 1.0 for the quickest candidate")
+    cosmetic_support_mm2: float = 0.0
+    safety_factor: float | None = Field(
+        default=None, description="Interlayer bending safety factor; operator detail only"
+    )
+    score: float = Field(description="Weighted cost of the non-strength factors; lower is better")
+
+
+class OrientationChoice(BaseModel):
+    face_down: Face
+    reason: str
+    overridden_by_operator: bool = False
+    candidates: list[OrientationCandidate] = Field(default_factory=list)
+
+    def chosen(self) -> OrientationCandidate | None:
+        return next((c for c in self.candidates if c.face_down == self.face_down), None)
+
+
 class GeometryReport(BaseModel):
     bbox_mm: tuple[float, float, float]
     volume_mm3: float
@@ -176,11 +251,22 @@ class GeometryReport(BaseModel):
     footprint_mm2: float = 0.0
     height_to_footprint_ratio: float = 0.0
     fits_build_volume: bool = True
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="The findings' one-line messages, kept so existing readers carry on working",
+    )
+    findings: list[DesignFinding] = Field(default_factory=list)
+    orientation: OrientationChoice | None = Field(
+        default=None, description="Set at quote time, once the material and load are known"
+    )
     units_suspect: bool = Field(
         default=False,
         description="Bounding box implies the file may be in inches rather than millimetres",
     )
+
+    def set_findings(self, findings: list[DesignFinding]) -> None:
+        self.findings = findings
+        self.warnings = [f.message for f in findings]
 
     def risk_score(self) -> float:
         """0-1 estimate of how likely this geometry is to fail on the plate.

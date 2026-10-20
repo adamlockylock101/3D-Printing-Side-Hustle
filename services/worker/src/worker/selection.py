@@ -619,10 +619,6 @@ def select_material(
             "food-safe coating or a food-safe printed-mould-then-cast approach is safer than "
             "direct food contact."
         )
-    if geometry is not None and not geometry.fits_build_volume:
-        warnings.append(
-            "The part exceeds the build volume and will need splitting into sections, or scaling."
-        )
 
     return Recommendation(
         primary=primary,

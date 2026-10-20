@@ -16,12 +16,13 @@ from pydantic import BaseModel, Field
 
 from . import storage
 from .config import reload_config, shop_config
-from .geometry import UnsupportedMesh, analyse
+from .design import review
+from .geometry import UnsupportedMesh, analyse, analyse_mesh, load_mesh
 from .intake import FollowUp, IntakeResult, apply_answers, extract, next_questions
 from .materials import by_id, load_materials, table_version
 from .pricing import build_quote
 from .safety import screen
-from .schemas import GeometryReport, Quote, Recommendation, Requirements
+from .schemas import Face, GeometryReport, Quote, Recommendation, Requirements, Severity
 from .selection import select_material
 from .slicing import (
     SlicerUnavailable,
@@ -99,6 +100,10 @@ class QuoteRequest(BaseModel):
     requirements: Requirements
     material_id: str | None = Field(
         default=None, description="Override the recommendation. Logged as a customer override."
+    )
+    orientation: Face | None = Field(
+        default=None,
+        description="Operator override of the face that goes on the bed. Re-prices the job.",
     )
 
 
@@ -264,7 +269,8 @@ def quote(body: QuoteRequest) -> QuoteResponse:
             status_code=404, detail="That upload has expired or was never stored."
         ) from exc
 
-    geometry = analyse(path)
+    mesh = load_mesh(path)
+    geometry = analyse_mesh(mesh)
     recommendation = select_material(body.requirements, geometry=geometry)
 
     if recommendation.declined:
@@ -288,16 +294,63 @@ def quote(body: QuoteRequest) -> QuoteResponse:
             "Our recommendation and the reasons for it are attached to this order."
         )
 
-    sliced = slice_mesh(path, material, recommendation.print_settings, geometry)
-    built = build_quote(material, sliced, geometry, body.requirements)
+    # The design review knows the material and the load, so it chooses the orientation and
+    # re-runs the checks with that material's thresholds. Everything after it — the slice, the
+    # risk buffer, the approved file — uses the orientation it chose.
+    design = review(
+        mesh,
+        geometry,
+        material,
+        body.requirements,
+        recommendation.print_settings,
+        excluded_materials={r.material_id for r in recommendation.rejected},
+        orientation_override=body.orientation,
+    )
+    _apply_review(recommendation, geometry, design.geometry, design.face_down)
+
+    sliced = slice_mesh(path, material, recommendation.print_settings, design.print_geometry)
+    built = build_quote(material, sliced, design.print_geometry, body.requirements)
+
+    must_fix = [f for f in design.geometry.findings if f.severity == Severity.MUST_FIX]
+    if must_fix and not built.requires_manual_review:
+        built.requires_manual_review = True
+        built.manual_review_reason = "Design check: " + must_fix[0].message
 
     return QuoteResponse(
         recommendation=recommendation,
         quote=built,
-        geometry=geometry,
+        geometry=design.geometry,
         overridden=overridden,
         override_acknowledgement=acknowledgement,
     )
+
+
+def _apply_review(
+    recommendation: Recommendation,
+    upload_geometry: GeometryReport,
+    reviewed: GeometryReport,
+    face_down: str,
+) -> None:
+    """Fold the design review back into the recommendation.
+
+    The recommendation carries copies of the geometry warnings so it stands alone as a
+    response. The review replaces those with its own, so the copies must be swapped too, or a
+    page that shows both would print a stale line next to its corrected version.
+    """
+    own = [w for w in recommendation.warnings if w not in upload_geometry.warnings]
+    recommendation.warnings = reviewed.warnings + own
+    recommendation.print_settings["orientation"] = face_down
+
+    orientation = next(f for f in reviewed.findings if f.check == "orientation")
+    advice = orientation.message
+    strength = next((f for f in reviewed.findings if f.check == "load_vs_layers"), None)
+    if strength is not None:
+        advice += " " + strength.message
+    elif recommendation.orientation_advice:
+        # Loads the strength check does not cover (clamping, compression) keep the material
+        # engine's own note on them.
+        advice += " " + recommendation.orientation_advice
+    recommendation.orientation_advice = advice
 
 
 @app.post("/slice")

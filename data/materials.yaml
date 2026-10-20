@@ -21,13 +21,97 @@
 #   process_capability_mm nominal dimensional tolerance on a tuned machine
 #   tolerance_floor_mm    tightest tolerance the process can be pushed to; below this, decline
 #                         or escalate to another process rather than promise something you cannot hold
+#   design               thresholds for the design feedback checks (worker/design.py). Set per
+#                        process under process_defaults; a material may override any key with its
+#                        own `design:` block, which is merged over the process defaults.
 
-version: 0.3.0
+version: 0.4.0
 process_defaults:
   fdm_04_nozzle:
     process_capability_mm: 0.20
     tolerance_floor_mm: 0.15
     min_feature_mm: 0.8
+    design:
+      # Extrusion width on a 0.4 mm nozzle. A wall thinner than one line cannot be laid down.
+      min_wall_mm: 0.42
+      # Every mainstream slicer generates support past 45 degrees from vertical by default, so
+      # this is the line the customer's part is actually judged against.
+      overhang_angle_deg: 45
+      # Faces within this distance of the lowest point sit on the plate, not in mid-air. A
+      # little over two 0.2 mm layers, so a slightly uneven bottom still counts as on the bed.
+      bed_tolerance_mm: 0.6
+      # Above this share of the surface needing support, support scarring and removal time
+      # stop being incidental. Shop rule of thumb; calibrate from the job log.
+      max_overhang_fraction: 0.4
+      # Height over the square root of the footprint. Past about 4 a part needs a brim to stay
+      # down on a fast CoreXY bed. Shop rule of thumb.
+      max_aspect_ratio: 4.0
+      # Above this a CAD export was almost certainly done at needless resolution. It slows
+      # slicing; it does not change the print.
+      max_triangles: 1500000
+      # STL carries no units. A largest dimension under 5 mm, or ten times the build volume,
+      # is far likelier to be inches or metres than a real part.
+      units_min_dimension_mm: 5.0
+      units_max_build_multiple: 10.0
+
+      orientation:
+        # How the six face-down candidates are traded off when strength does not decide it.
+        # Each term is min-max normalised across the candidates, so these are relative weights.
+        # Support dominates because it costs time, material, labour and surface finish at once.
+        weights: { support: 0.45, bed_contact: 0.20, height: 0.10, time: 0.25 }
+        # Support material is printed sparse. 12% matches the estimator in slicing.py.
+        support_density: 0.12
+        # Supports touching a face the customer marked cosmetic: anything above this much
+        # area counts as marking it. A few mm2 is a stray triangle, not a scar.
+        cosmetic_support_tolerance_mm2: 5.0
+        # Below this bed contact the part relies on a brim to stay down. Roughly a 10 x 10 mm
+        # pad; shop rule of thumb.
+        min_bed_contact_mm2: 100.0
+
+      load:
+        # Load types that pull layer bonds apart when they cross the layers. Compression and
+        # clamping press layers together instead, which is not the weak direction, so they do
+        # not get to overrule the other orientation factors.
+        applies_to: [tension, bending, shear, impact, cyclic]
+        # When the customer gives no number, what their answer to "roughly how much load?" is
+        # taken to mean. The intake options read: light = a few hundred grams, moderate = a few
+        # kilograms, heavy = 20 kg or more. Unanswered is treated as moderate.
+        assumed_load_n: { light: 5.0, moderate: 50.0, heavy: 200.0 }
+        # Shock and fatigue raise the effective load well above the static figure. Common
+        # first-pass design factors, not measurements.
+        dynamic_factor: { impact: 2.0, cyclic: 1.5 }
+        # Safety-factor bands on interlayer strength (tensile x z_strength_ratio). These are
+        # bands, not a verdict: z_strength_ratio is provisional, so the customer sees only the
+        # band and the operator sees the number.
+        adequate_at_least: 2.0
+        marginal_at_least: 1.0
+        # The strongest orientation wins unless another is within this factor of it, in which
+        # case the other orientation factors choose between them.
+        strength_margin: 1.25
+        # Sections are cut through the middle of the part only: the first and last few percent
+        # are slivers that say more about the bed than about the load path.
+        slices: 40
+        slice_span: [0.05, 0.95]
+
+      holes:
+        # 4 pi A / P^2. A 64-facet circle is 0.998, a hexagon is 0.907; 0.95 keeps faceted
+        # holes in and slots and polygons out.
+        min_circularity: 0.95
+        # Smaller than this cannot be printed as a hole at all; larger is a cut-out, not a
+        # hole anyone will ream.
+        min_diameter_mm: 1.0
+        max_diameter_mm: 30.0
+        # Vertical holes print undersize because each perimeter is a polygon inside the circle
+        # and the plastic squashes inward. The effect is proportionally worst on small holes;
+        # about 5 mm is where it starts to matter for a bolt or pin. Shop rule of thumb.
+        vertical_undersize_below_mm: 5.0
+        # What to add to a small vertical hole's diameter in CAD. Typical on a tuned 0.4 mm
+        # nozzle; provisional, measure on your own machine.
+        oversize_allowance_mm: 0.2
+        # Horizontal holes up to this size print oval with a drooping top; above it the top
+        # needs support or a teardrop shape.
+        horizontal_bridge_mm: 8.0
+        sections_per_axis: 9
   resin_msla:
     process_capability_mm: 0.05
     tolerance_floor_mm: 0.03
@@ -114,6 +198,10 @@ materials:
     notes: >
       The workhorse. Excellent layer adhesion (best Z ratio of the common materials), tough,
       water-resistant, no enclosure needed. Stringy and poor at fine detail; mediocre UV life.
+    design:
+      holes:
+        # PETG oozes into small holes; a slightly larger allowance than PLA.
+        oversize_allowance_mm: 0.25
 
   - id: asa
     name: ASA
@@ -216,6 +304,10 @@ materials:
     notes: >
       Highest stiffness and heat resistance on the list. Severely anisotropic — orientation
       matters more than material choice here. Absorbs water fast; must be dried and kept dry.
+    design:
+      holes:
+        # Filled nylon shrinks more than PLA or PETG as it cools.
+        oversize_allowance_mm: 0.3
 
   - id: pa12
     name: PA12 (nylon)
@@ -241,6 +333,10 @@ materials:
     requires_drying: true
     food_safe_capable: false
     notes: Tough, wear-resistant, self-lubricating. Gears, living hinges, snap fits. Swells when wet.
+    design:
+      holes:
+        # Nylon shrinks more than PLA or PETG as it cools.
+        oversize_allowance_mm: 0.3
 
   - id: pp
     name: Polypropylene
@@ -293,6 +389,14 @@ materials:
     requires_drying: true
     food_safe_capable: false
     notes: Flexible, near-isotropic, effectively unbreakable. Slow to print; poor dimensional precision.
+    design:
+      # A flexible wall under one or two lines flexes during printing and comes out ragged.
+      min_wall_mm: 0.8
+      # Soft filament sags further on an overhang than a rigid one.
+      overhang_angle_deg: 40
+      holes:
+        # TPU is printed slowly and squashes more, so holes close up further.
+        oversize_allowance_mm: 0.4
 
   - id: resin_standard
     name: Standard photopolymer resin

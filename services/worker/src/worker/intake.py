@@ -513,6 +513,31 @@ def _catalogue(req: Requirements) -> list[tuple[float, FollowUp]]:
             )
         )
 
+    # Only worth asking once we know looks matter. Support always marks the face it touches,
+    # so this decides which way up the part prints.
+    if req.aesthetics.visible and req.aesthetics.cosmetic_face is None:
+        candidates.append(
+            (
+                0.3,
+                FollowUp(
+                    field="aesthetics.cosmetic_face",
+                    question="Which face has to look best?",
+                    help_text=(
+                        "As you modelled it. We'll print so support never touches that face, "
+                        "where the part allows it."
+                    ),
+                    options=_opts(
+                        ("top", "The top"),
+                        ("bottom", "The bottom"),
+                        ("front", "The front"),
+                        ("back", "The back"),
+                        ("left", "The left side"),
+                        ("right", "The right side"),
+                    ),
+                ),
+            )
+        )
+
     return candidates
 
 

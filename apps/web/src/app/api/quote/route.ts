@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { record } from "@/lib/events";
+import { forCustomer } from "@/lib/findings";
 import { toCents } from "@/lib/money";
 import { worker, WorkerError } from "@/lib/worker";
 import type { Requirements } from "@/lib/types";
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
   // A declined recommendation is a real answer, not an error — return it with no quote.
   if (!result.quote || result.recommendation.declined) {
-    return NextResponse.json({ ...result, quoteId: null });
+    return NextResponse.json(forCustomer({ ...result, quoteId: null }));
   }
 
   // Persistence is best-effort so a database outage degrades to "quote shown, can't check out"
@@ -87,5 +88,6 @@ export async function POST(request: Request) {
     console.error("Could not persist quote", error);
   }
 
-  return NextResponse.json({ ...result, quoteId });
+  // The stored copy keeps the operator detail; the browser gets the customer's view.
+  return NextResponse.json(forCustomer({ ...result, quoteId }));
 }

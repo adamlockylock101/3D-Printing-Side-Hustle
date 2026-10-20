@@ -18,6 +18,7 @@ plate ready for the printer.
 | [docs/agent-contract.md](docs/agent-contract.md) | The phase 3 shop agent's API, fixed in advance |
 | [docs/material-selection.md](docs/material-selection.md) | The requirements-to-material engine — the core differentiator |
 | [docs/slicing.md](docs/slicing.md) | Real slicing vs. the geometric estimator, measured part by part |
+| [docs/design-feedback.md](docs/design-feedback.md) | Printability findings: orientation, load across layers, holes, and where the thresholds live |
 | [docs/open-questions.md](docs/open-questions.md) | What is still undecided, and the defaults assumed meanwhile |
 | [data/materials.yaml](data/materials.yaml) | Seed material property table (needs validation against supplier datasheets) |
 

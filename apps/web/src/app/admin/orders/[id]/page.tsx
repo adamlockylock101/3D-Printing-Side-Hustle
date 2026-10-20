@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { DesignFindings } from "@/components/DesignFindings";
 import { Rationale } from "@/components/Rationale";
 import { isOperator } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
 import { formatDuration, formatMoney } from "@/lib/money";
-import type { CostLine, GeometryReport, Recommendation, Requirements } from "@/lib/types";
-import { advanceOrder, approveOrder, declineOrder } from "../../actions";
+import type {
+  CostLine,
+  Face,
+  GeometryReport,
+  OrientationChoice,
+  Recommendation,
+  Requirements,
+} from "@/lib/types";
+import { advanceOrder, approveOrder, declineOrder, reorientOrder } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +23,53 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
       <dd className="mt-0.5 text-sm">{children}</dd>
     </div>
+  );
+}
+
+const FACE_LABELS: Record<Face, string> = {
+  bottom: "Bottom (as modelled)",
+  top: "Top (upside down)",
+  front: "Front",
+  back: "Back",
+  left: "Left side",
+  right: "Right side",
+};
+
+/** Every orientation the worker weighed, so an override is an informed one. */
+function OrientationTable({ orientation }: { orientation: OrientationChoice }) {
+  return (
+    <table className="mt-3 w-full text-sm">
+      <thead>
+        <tr className="text-left text-xs uppercase tracking-wide text-muted">
+          <th className="py-1 font-normal">Face down</th>
+          <th className="py-1 text-right font-normal">Support</th>
+          <th className="py-1 text-right font-normal">Time</th>
+          <th className="py-1 text-right font-normal">Height</th>
+          <th className="py-1 text-right font-normal">Bed contact</th>
+          <th className="py-1 text-right font-normal">Layer SF</th>
+        </tr>
+      </thead>
+      <tbody className="tabular">
+        {orientation.candidates.map((c) => (
+          <tr
+            key={c.face_down}
+            className={c.face_down === orientation.face_down ? "font-semibold" : undefined}
+          >
+            <td className="py-1">
+              {FACE_LABELS[c.face_down]}
+              {c.face_down === orientation.face_down && " \u2190"}
+            </td>
+            <td className="py-1 text-right">{(c.support_mm3 / 1000).toFixed(1)} cm3</td>
+            <td className="py-1 text-right">x{c.time_index.toFixed(2)}</td>
+            <td className="py-1 text-right">{c.height_mm.toFixed(0)} mm</td>
+            <td className="py-1 text-right">{c.bed_contact_mm2.toFixed(0)} mm2</td>
+            <td className="py-1 text-right">
+              {c.safety_factor != null ? c.safety_factor.toFixed(2) : "\u2013"}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -64,6 +119,10 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
 
   const approve = approveOrder.bind(null, order.id);
   const decline = declineOrder.bind(null, order.id);
+  const reorient = reorientOrder.bind(null, order.id);
+  const orientation = geometry?.orientation ?? null;
+  // Direct orders are paid at the quoted price, so a re-quote that moved it leaves a difference.
+  const repriced = order.channel === "DIRECT" && quote && quote.priceCents !== order.amountCents;
 
   return (
     <div className="space-y-8">
@@ -100,17 +159,64 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                 <Field label="Overhang">{Math.round(geometry.overhang_fraction * 100)}%</Field>
                 <Field label="Watertight">{geometry.is_watertight ? "yes" : "no"}</Field>
               </dl>
-              {geometry.warnings.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {geometry.warnings.map((warning) => (
-                    <li
-                      key={warning}
-                      className="rounded-md border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-warn"
+              {geometry.findings ? (
+                <div className="mt-4">
+                  <DesignFindings findings={geometry.findings} operator />
+                </div>
+              ) : (
+                geometry.warnings.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {geometry.warnings.map((warning) => (
+                      <li
+                        key={warning}
+                        className="rounded-md border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-warn"
+                      >
+                        {warning}
+                      </li>
+                    ))}
+                  </ul>
+                )
+              )}
+            </section>
+          )}
+
+          {orientation && (
+            <section className="card">
+              <h2 className="font-semibold">
+                Orientation{" "}
+                {orientation.overridden_by_operator && (
+                  <span className="text-sm font-normal text-muted">set by you</span>
+                )}
+              </h2>
+              <p className="mt-2 text-sm">{orientation.reason}</p>
+              <OrientationTable orientation={orientation} />
+              <p className="mt-2 text-xs text-muted">
+                Time is relative to the quickest; layer SF is the interlayer bending safety
+                factor (provisional z-strength ratios), shown only to you.
+              </p>
+              {order.status === "IN_REVIEW" && quote && (
+                <form action={reorient} className="mt-4 flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="label" htmlFor="face">
+                      Face on the bed
+                    </label>
+                    <select
+                      id="face"
+                      name="face"
+                      defaultValue={orientation.face_down}
+                      className="input mt-1"
                     >
-                      {warning}
-                    </li>
-                  ))}
-                </ul>
+                      {orientation.candidates.map((c) => (
+                        <option key={c.face_down} value={c.face_down}>
+                          {FACE_LABELS[c.face_down]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="submit" className="btn-secondary">
+                    Re-orient and re-quote
+                  </button>
+                </form>
               )}
             </section>
           )}
@@ -150,7 +256,8 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               <div className="mt-3">
                 <Rationale text={recommendation.rationale} />
               </div>
-              {recommendation.orientation_advice && (
+              {/* The design findings above already explain the orientation when there are any. */}
+              {recommendation.orientation_advice && !geometry?.findings && (
                 <p className="mt-3 rounded-md border border-accent/30 bg-accentSoft px-3 py-2 text-sm">
                   {recommendation.orientation_advice}
                 </p>
@@ -189,6 +296,13 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                   {quote.estimated ? "estimated from geometry" : "real slice"}
                 </Field>
               </dl>
+              {repriced && (
+                <p className="mt-3 rounded-md border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-warn">
+                  Re-quoted at {formatMoney(quote.priceCents, quote.currency)}; the customer paid{" "}
+                  {formatMoney(order.amountCents, order.currency)}. Settle the difference with them
+                  before approving.
+                </p>
+              )}
               <table className="mt-4 w-full text-sm">
                 <tbody>
                   {lines.map((line) => (

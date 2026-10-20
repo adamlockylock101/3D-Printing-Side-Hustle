@@ -1,6 +1,7 @@
 import type {
   AnalyseResponse,
   AnswersResponse,
+  Face,
   IntakeResponse,
   PublicConfig,
   QuoteResponse,
@@ -73,10 +74,16 @@ export const worker = {
     });
   },
 
-  quote(uploadId: string, requirements: Requirements, materialId?: string) {
+  /** `orientation` is the operator's override of which face goes on the bed. */
+  quote(uploadId: string, requirements: Requirements, materialId?: string, orientation?: Face) {
     return call<QuoteResponse>("/quote", {
       method: "POST",
-      body: JSON.stringify({ upload_id: uploadId, requirements, material_id: materialId ?? null }),
+      body: JSON.stringify({
+        upload_id: uploadId,
+        requirements,
+        material_id: materialId ?? null,
+        orientation: orientation ?? null,
+      }),
     });
   },
 

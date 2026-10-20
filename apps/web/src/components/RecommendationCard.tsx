@@ -9,6 +9,7 @@ export function RecommendationCard({
   selectedMaterialId,
   onSelectMaterial,
   alreadyShown = [],
+  orientationShown = false,
 }: {
   recommendation: Recommendation;
   selectedMaterialId: string;
@@ -19,6 +20,8 @@ export function RecommendationCard({
    * both would otherwise print each one twice.
    */
   alreadyShown?: string[];
+  /** The design findings on the page already explain the orientation; don't repeat it here. */
+  orientationShown?: boolean;
 }) {
   const [showRejected, setShowRejected] = useState(false);
   const warnings = recommendation.warnings.filter((w) => !alreadyShown.includes(w));
@@ -33,7 +36,7 @@ export function RecommendationCard({
     <div className="space-y-6">
       <Rationale text={recommendation.rationale} />
 
-      {recommendation.orientation_advice && (
+      {recommendation.orientation_advice && !orientationShown && (
         <div className="rounded-md border border-accent/30 bg-accentSoft px-4 py-3">
           <h3 className="text-sm font-semibold text-accent">How we&rsquo;ll orient it</h3>
           <p className="mt-1 text-sm leading-relaxed">{recommendation.orientation_advice}</p>

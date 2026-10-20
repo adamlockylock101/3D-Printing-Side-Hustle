@@ -52,12 +52,58 @@ export interface Requirements {
     visible?: boolean | null;
     colour?: string | null;
     finish?: string | null;
+    cosmetic_face?: Face | null;
   };
   cost_sensitivity?: "low" | "medium" | "high" | null;
   lead_time: LeadTime;
   quantity: number;
   notes_freeform?: string | null;
   raw_text?: string | null;
+}
+
+/** A face of the part as the customer modelled it: +Z is the top, -Y the front. */
+export type Face = "bottom" | "top" | "front" | "back" | "left" | "right";
+
+export type Severity = "info" | "advise" | "must_fix";
+
+export interface DesignFinding {
+  check: string;
+  severity: Severity;
+  message: string;
+  measured: number | null;
+  threshold: number | null;
+  unit: string | null;
+  location: {
+    description: string;
+    z_mm: number | null;
+    bbox_min: [number, number, number] | null;
+    bbox_max: [number, number, number] | null;
+  } | null;
+  why: string;
+  fix: string;
+  band: "adequate" | "marginal" | "weak" | null;
+  /** Operator only. Stripped by the storefront before anything reaches a customer. */
+  operator_note?: string | null;
+}
+
+export interface OrientationCandidate {
+  face_down: Face;
+  support_mm3: number;
+  support_fraction: number;
+  bed_contact_mm2: number;
+  height_mm: number;
+  time_index: number;
+  cosmetic_support_mm2: number;
+  /** Operator only, like operator_note. */
+  safety_factor?: number | null;
+  score: number;
+}
+
+export interface OrientationChoice {
+  face_down: Face;
+  reason: string;
+  overridden_by_operator: boolean;
+  candidates: OrientationCandidate[];
 }
 
 export interface GeometryReport {
@@ -72,6 +118,9 @@ export interface GeometryReport {
   height_to_footprint_ratio: number;
   fits_build_volume: boolean;
   warnings: string[];
+  /** Absent on geometry stored before the design checks existed. */
+  findings?: DesignFinding[];
+  orientation?: OrientationChoice | null;
   units_suspect: boolean;
 }
 

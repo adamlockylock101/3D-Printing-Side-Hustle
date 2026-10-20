@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { forCustomer } from "@/lib/findings";
 import { worker, WorkerError } from "@/lib/worker";
 
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await worker.analyse(file, file.name);
-    return NextResponse.json(result);
+    return NextResponse.json(forCustomer(result));
   } catch (error) {
     if (error instanceof WorkerError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

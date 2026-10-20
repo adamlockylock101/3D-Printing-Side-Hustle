@@ -21,6 +21,13 @@ OrcaSlicer and Bambu Studio are also supported. They take JSON settings bundles 
 layout and AMS filament assignment live in the 3mf and have nowhere to go in raw G-code. The
 worker picks the right command shape and output format from the binary name.
 
+## Orientation
+
+The quote is sliced in the orientation the design review chose, not as uploaded. The face that
+goes down travels in `print_settings["orientation"]`, and both `slice_mesh` and
+`produce_artifact` turn the mesh to it before slicing, so the price and the approved file
+describe the same print. See [design-feedback.md](design-feedback.md).
+
 ## Profiles are generated, not hand-written
 
 `scripts/gen_slicer_profiles.py` writes one complete `.ini` per stocked FDM material into

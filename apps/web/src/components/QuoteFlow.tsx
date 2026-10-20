@@ -59,6 +59,11 @@ export function QuoteFlow() {
   const [questionRounds, setQuestionRounds] = useState(0);
 
   const [result, setResult] = useState<(QuoteResponse & { quoteId: string | null }) | null>(null);
+  // Once there is a quote, its geometry supersedes the upload's: the design review has re-run the
+  // checks for the chosen material and orientation. One panel shows whichever is current, and
+  // the recommendation card is told exactly what that panel shows, so nothing appears twice.
+  const shownGeometry =
+    result && (step === "quote" || step === "checkout") ? result.geometry : analysis?.geometry;
   const [materialId, setMaterialId] = useState<string>("");
 
   const [email, setEmail] = useState("");
@@ -262,7 +267,7 @@ export function QuoteFlow() {
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold">{analysis.filename}</h2>
               <div className="mt-4">
-                <GeometrySummary geometry={analysis.geometry} />
+                <GeometrySummary geometry={shownGeometry ?? analysis.geometry} />
               </div>
             </div>
             <MeshPreview file={file} className="hidden h-48 w-48 shrink-0 rounded-md bg-rule/20 sm:block" />
@@ -435,7 +440,10 @@ export function QuoteFlow() {
                     recommendation={result.recommendation}
                     selectedMaterialId={materialId}
                     onSelectMaterial={chooseMaterial}
-                    alreadyShown={analysis?.geometry.warnings ?? []}
+                    alreadyShown={shownGeometry?.warnings ?? []}
+                    orientationShown={
+                      shownGeometry?.findings?.some((f) => f.check === "orientation") ?? false
+                    }
                   />
                 </div>
               </div>

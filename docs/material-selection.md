@@ -134,6 +134,9 @@ review screen shows it next to the slicer preview. For CF-filled materials the a
 severe enough that a bad orientation is worse than a cheaper material printed well — say so in
 the rationale.
 
+This is now implemented as a check on the geometry rather than advice alone: see
+[design-feedback.md](design-feedback.md).
+
 ## 5. When FDM isn't the answer
 
 Escalate to resin (or to "we can't do this") when:
