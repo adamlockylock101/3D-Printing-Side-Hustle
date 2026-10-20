@@ -49,6 +49,19 @@ quickly the hotend can melt plastic, so each material also carries `max_volumetr
 **If you change printers, change the kinematics.** A profile describing the wrong machine
 produces confidently wrong prices.
 
+### Still to check against a real print
+
+These kinematics are Bambu Studio's numbers, but the time comes from **PrusaSlicer's** estimate
+of a machine with those limits. It is not Bambu Studio's own estimate, and it has not been
+checked against a real X1C. Bambu firmware may plan motion differently, and every "Time real"
+figure on this page is a PrusaSlicer estimate, not a stopwatch reading. That matters most for
+the acceleration-limited standoff below, where the motion model *is* the print time.
+
+To close it out, print the standoff and the sign bracket on the X1C using the shop's actual
+Bambu Studio profile. Record wall-clock time and weigh each part, then compare with the
+quoted figures. If time is materially out (more than about 10–15% is a reasonable bar),
+adjust `MACHINE_PROFILES["bambu"]` rather than the estimator. Until that has been done, treat machine-time pricing as provisional.
+
 ## Estimator vs. real slice
 
 Same four parts as the demo seed, same customer answers, same recommended material and print

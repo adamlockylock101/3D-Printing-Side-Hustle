@@ -5,6 +5,8 @@ Answers to §1 change what gets built and in what order. §2–§5 can be settle
 > **Q1, Q7, Q8, Q9, Q10 and Q11 are answered** — see [decisions.md](decisions.md).
 > Bambu Lab printers, Next.js + Python worker, Stripe *and* Etsy, full MVP scope.
 > The remaining §1 items have working defaults in `config/shop.yaml` and are not blocking.
+> Q-H in decisions.md (which slicer produces the print file for the Bambu machines) is also
+> open; PrusaSlicer is the default until it is settled.
 
 ## 1. Blocking — needed before Phase 1
 
